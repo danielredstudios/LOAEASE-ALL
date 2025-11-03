@@ -1,0 +1,201 @@
+﻿Imports MySql.Data.MySqlClient
+Imports System.Globalization
+
+Public Class frmKiosk
+
+    Private Sub frmKiosk_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Set the minimum date for the DateTimePicker to today
+        dtpScheduleDate.MinDate = DateTime.Today
+
+        ' Load available counters into the ComboBox
+        LoadCounters()
+
+        ' Attach event handlers to reload time slots whenever the date or counter changes
+        AddHandler dtpScheduleDate.ValueChanged, AddressOf Schedule_Changed
+        AddHandler cmbCounters.SelectedIndexChanged, AddressOf Schedule_Changed
+    End Sub
+
+    Private Sub LoadCounters()
+        cmbCounters.Items.Clear()
+        cmbCounters.DisplayMember = "Text"
+        cmbCounters.ValueMember = "Value"
+
+        ' Remove the WHERE clause since neither is_open nor status columns exist
+        Dim query As String = "SELECT counter_id, counter_name FROM counters ORDER BY counter_name"
+
+        Using conn As New MySqlConnection(DatabaseHelper.GetConnectionString())
+            Try
+                conn.Open()
+                Using cmd As New MySqlCommand(query, conn)
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            cmbCounters.Items.Add(New With {.Text = reader("counter_name").ToString(), .Value = reader("counter_id")})
+                        End While
+                    End Using
+                End Using
+            Catch ex As Exception
+                MessageBox.Show("Failed to load counters: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
+        End Using
+    End Sub
+
+    Private Sub Schedule_Changed(sender As Object, e As EventArgs)
+        ' When date or counter changes, reload the time slots
+        LoadAvailableTimeSlots()
+    End Sub
+
+    Private Sub LoadAvailableTimeSlots()
+        cmbTimeSlots.Items.Clear()
+        If cmbCounters.SelectedItem Is Nothing Then Return
+
+        Dim selectedCounter = DirectCast(cmbCounters.SelectedItem, Object)
+        Dim counterId As Integer = selectedCounter.Value
+        Dim selectedDate As DateTime = dtpScheduleDate.Value
+
+        Dim query As String = "SELECT TIME(schedule_datetime) FROM queues WHERE counter_id = @counter_id AND DATE(schedule_datetime) = @schedule_date"
+        Dim bookedSlots As New List(Of TimeSpan)
+
+        Using conn As New MySqlConnection(DatabaseHelper.GetConnectionString())
+            Try
+                conn.Open()
+                Using cmd As New MySqlCommand(query, conn)
+                    cmd.Parameters.AddWithValue("@counter_id", counterId)
+                    cmd.Parameters.AddWithValue("@schedule_date", selectedDate.ToString("yyyy-MM-dd"))
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            bookedSlots.Add(reader.GetTimeSpan(0))
+                        End While
+                    End Using
+                End Using
+            Catch ex As Exception
+                MessageBox.Show("Failed to load time slots: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Return
+            End Try
+        End Using
+
+        ' Generate time slots (e.g., from 8:00 AM to 5:00 PM in 30-minute intervals)
+        Dim startTime As New DateTime(selectedDate.Year, selectedDate.Month, selectedDate.Day, 8, 0, 0)
+        Dim endTime As New DateTime(selectedDate.Year, selectedDate.Month, selectedDate.Day, 17, 0, 0)
+        Dim interval As TimeSpan = TimeSpan.FromMinutes(30)
+        Dim currentTime As DateTime = startTime
+
+        While currentTime < endTime
+            If Not bookedSlots.Contains(currentTime.TimeOfDay) Then
+                ' Add time in "hh:mm AM/PM" format
+                cmbTimeSlots.Items.Add(currentTime.ToString("hh:mm tt", CultureInfo.InvariantCulture))
+            End If
+            currentTime = currentTime.Add(interval)
+        End While
+
+        If cmbTimeSlots.Items.Count = 0 Then
+            cmbTimeSlots.Items.Add("No available slots")
+            cmbTimeSlots.Enabled = False
+        Else
+            cmbTimeSlots.Enabled = True
+            cmbTimeSlots.SelectedIndex = 0
+        End If
+    End Sub
+
+    ' CORRECTED: Function now correctly queries the 'username' column.
+    Private Function GetUserIdFromUsername(username As String) As Integer
+        Dim userId As Integer = -1 ' Return -1 if not found
+        Dim query As String = "SELECT user_id FROM users WHERE username = @username AND role = 'student' LIMIT 1"
+
+        Using conn As New MySqlConnection(DatabaseHelper.GetConnectionString())
+            Try
+                conn.Open()
+                Using cmd As New MySqlCommand(query, conn)
+                    cmd.Parameters.AddWithValue("@username", username)
+                    Dim result = cmd.ExecuteScalar()
+                    If result IsNot Nothing AndAlso Not IsDBNull(result) Then
+                        userId = Convert.ToInt32(result)
+                    End If
+                End Using
+            Catch ex As Exception
+                MessageBox.Show("Error finding student ID: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
+        End Using
+        Return userId
+    End Function
+
+    ' CORRECTED: This event handler now calls the updated 'GetUserIdFromUsername' function.
+    Private Sub btnGetTicket_Click(sender As Object, e As EventArgs) Handles btnGetTicket.Click
+        ' --- Validation ---
+        If String.IsNullOrWhiteSpace(txtStudentID.Text) Then
+            MessageBox.Show("Please enter your Student ID.", "Input Required", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        If cmbCounters.SelectedItem Is Nothing Then
+            MessageBox.Show("Please select a counter.", "Input Required", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        If cmbTimeSlots.SelectedItem Is Nothing OrElse cmbTimeSlots.Text = "No available slots" Then
+            MessageBox.Show("Please select an available time slot.", "Input Required", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        ' --- Get User ID ---
+        Dim userId As Integer = GetUserIdFromUsername(txtStudentID.Text.Trim())
+        If userId = -1 Then
+            MessageBox.Show("Student ID not found. Please check and try again.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return
+        End If
+
+        ' --- Prepare Data ---
+        Dim selectedCounter = DirectCast(cmbCounters.SelectedItem, Object)
+        Dim counterId As Integer = selectedCounter.Value
+        Dim isPriority As Integer = If(chkIsPriority.Checked, 1, 0)
+
+        Dim scheduleDate As DateTime = dtpScheduleDate.Value.Date
+        Dim selectedTime As DateTime = DateTime.ParseExact(cmbTimeSlots.Text, "hh:mm tt", CultureInfo.InvariantCulture)
+        Dim finalScheduleDateTime As DateTime = scheduleDate.Add(selectedTime.TimeOfDay)
+
+        ' --- Database Insertion ---
+        Dim queueNumber As String = ""
+        Using conn As New MySqlConnection(DatabaseHelper.GetConnectionString())
+            conn.Open()
+            Dim transaction As MySqlTransaction = conn.BeginTransaction()
+            Try
+                ' Get counter prefix
+                Dim cmd As New MySqlCommand("SELECT counter_prefix FROM counters WHERE counter_id = @counter_id", conn, transaction)
+                cmd.Parameters.AddWithValue("@counter_id", counterId)
+                Dim prefix As String = cmd.ExecuteScalar().ToString()
+
+                ' Get next number for the day
+                cmd.CommandText = "SELECT COUNT(*) + 1 FROM queues WHERE counter_id = @counter_id AND DATE(schedule_datetime) = @schedule_date"
+                cmd.Parameters.AddWithValue("@schedule_date", finalScheduleDateTime.ToString("yyyy-MM-dd"))
+                Dim nextNum As Integer = Convert.ToInt32(cmd.ExecuteScalar())
+                queueNumber = prefix & nextNum.ToString("D3")
+
+                ' Insert into queues table
+                cmd.CommandText = "INSERT INTO queues (user_id, counter_id, queue_number, is_priority, status, schedule_datetime, created_at) " &
+                                  "VALUES (@user_id, @counter_id, @queue_number, @is_priority, 'waiting', @schedule_datetime, NOW())"
+                cmd.Parameters.AddWithValue("@user_id", userId)
+                cmd.Parameters.AddWithValue("@queue_number", queueNumber)
+                cmd.Parameters.AddWithValue("@is_priority", isPriority)
+                cmd.Parameters.AddWithValue("@schedule_datetime", finalScheduleDateTime)
+                cmd.ExecuteNonQuery()
+
+                transaction.Commit()
+
+                ' --- Show Success ---
+                lblQueueNumber.Text = queueNumber
+                pnlTicketResult.Visible = True
+
+            Catch ex As Exception
+                transaction.Rollback()
+                MessageBox.Show("Failed to create ticket: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
+        End Using
+    End Sub
+
+    Private Sub btnNewTransaction_Click(sender As Object, e As EventArgs) Handles btnNewTransaction.Click
+        ' Reset the form for a new transaction
+        txtStudentID.Clear()
+        dtpScheduleDate.Value = DateTime.Today
+        cmbCounters.SelectedIndex = -1
+        cmbTimeSlots.Items.Clear()
+        chkIsPriority.Checked = False
+        pnlTicketResult.Visible = False
+    End Sub
+End Class

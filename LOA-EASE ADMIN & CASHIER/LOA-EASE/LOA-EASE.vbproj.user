@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <_LastSelectedProfileId>C:\Users\RED\source\repos\LOA-EASE\LOA-EASE\My Project\PublishProfiles\FolderProfile.pubxml</_LastSelectedProfileId>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Update="frmAddEditCounter.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="frmAddEditUser.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="frmAddStudent.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="frmAdminDashboard.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="frmCashierDashboard.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="frmLogin.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="frmQueueDisplay.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ucCounter.vb">
+      <SubType>UserControl</SubType>
+    </Compile>
+  </ItemGroup>
+</Project>

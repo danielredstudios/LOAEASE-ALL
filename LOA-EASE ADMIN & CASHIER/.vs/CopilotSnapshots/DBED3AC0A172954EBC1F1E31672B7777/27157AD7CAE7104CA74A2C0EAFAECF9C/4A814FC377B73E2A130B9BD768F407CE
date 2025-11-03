@@ -1,0 +1,261 @@
+﻿Imports MySql.Data.MySqlClient
+Imports System.Globalization
+
+Public Class frmKiosk
+
+    ' Add variables to store automatically selected values
+    Private selectedCounterId As Integer = -1
+    Private selectedTimeSlot As String = ""
+    Private selectedCounterName As String = ""
+    Private selectedDateTime As DateTime
+
+    Private Sub frmKiosk_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Set the minimum date for the DateTimePicker to today
+        dtpScheduleDate.MinDate = DateTime.Today
+
+        ' Attach event handler to reload time slots whenever the date changes
+        AddHandler dtpScheduleDate.ValueChanged, AddressOf Schedule_Changed
+    End Sub
+
+    Private Sub Schedule_Changed(sender As Object, e As EventArgs)
+        ' When date changes, automatically find the best counter and time slot
+        FindBestCounterAndTimeSlot()
+    End Sub
+
+    Private Sub FindBestCounterAndTimeSlot()
+        ' Clear previous selection
+        selectedCounterId = -1
+        selectedTimeSlot = ""
+        selectedCounterName = ""
+        
+        ' Get the selected date
+        Dim selectedDate As DateTime = dtpScheduleDate.Value.Date
+        
+        ' Dictionary to store counter details and appointment counts
+        Dim counterAppointments As New Dictionary(Of Integer, Tuple(Of String, Integer))  ' CounterId -> (CounterName, AppointmentCount)
+        
+        Using conn As New MySqlConnection(DatabaseHelper.GetConnectionString())
+            Try
+                conn.Open()
+                
+                ' First, get all available counters
+                Dim queryCounters As String = "SELECT counter_id, counter_name FROM counters ORDER BY counter_name"
+                Using cmdCounters As New MySqlCommand(queryCounters, conn)
+                    Using readerCounters As MySqlDataReader = cmdCounters.ExecuteReader()
+                        While readerCounters.Read()
+                            Dim counterId As Integer = readerCounters.GetInt32("counter_id")
+                            Dim counterName As String = readerCounters.GetString("counter_name")
+                            ' Initialize with 0 appointments
+                            counterAppointments.Add(counterId, Tuple.Create(counterName, 0))
+                        End While
+                    End Using
+                End Using
+                
+                ' Now count appointments for each counter on the selected date
+                Dim queryAppointments As String = "SELECT counter_id, COUNT(*) as appointment_count FROM queues " & 
+                                                 "WHERE DATE(schedule_datetime) = @schedule_date " & 
+                                                 "GROUP BY counter_id"
+                Using cmdAppointments As New MySqlCommand(queryAppointments, conn)
+                    cmdAppointments.Parameters.AddWithValue("@schedule_date", selectedDate.ToString("yyyy-MM-dd"))
+                    Using readerAppointments As MySqlDataReader = cmdAppointments.ExecuteReader()
+                        While readerAppointments.Read()
+                            Dim counterId As Integer = readerAppointments.GetInt32("counter_id")
+                            Dim appointmentCount As Integer = readerAppointments.GetInt32("appointment_count")
+                            
+                            ' Update the appointment count if this counter exists in our dictionary
+                            If counterAppointments.ContainsKey(counterId) Then
+                                Dim counterName As String = counterAppointments(counterId).Item1
+                                counterAppointments(counterId) = Tuple.Create(counterName, appointmentCount)
+                            End If
+                        End While
+                    End Using
+                End Using
+                
+                ' Find the counter with the least appointments
+                Dim minAppointments As Integer = Integer.MaxValue
+                For Each kvp In counterAppointments
+                    If kvp.Value.Item2 < minAppointments Then
+                        minAppointments = kvp.Value.Item2
+                        selectedCounterId = kvp.Key
+                        selectedCounterName = kvp.Value.Item1
+                    End If
+                Next
+                
+                ' If we found a counter, find the earliest available time slot
+                If selectedCounterId <> -1 Then
+                    FindEarliestAvailableTimeSlot(conn, selectedDate, selectedCounterId)
+                End If
+                
+            Catch ex As Exception
+                MessageBox.Show("Failed to find available counter and time slot: " & ex.Message, 
+                                "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
+        End Using
+        
+        ' Update UI with selected counter and time
+        UpdateUIWithSelection()
+    End Sub
+
+    Private Sub FindEarliestAvailableTimeSlot(conn As MySqlConnection, selectedDate As DateTime, counterId As Integer)
+        ' Get all booked time slots for the selected counter and date
+        Dim bookedSlots As New List(Of TimeSpan)
+        
+        Dim query As String = "SELECT TIME(schedule_datetime) FROM queues " & 
+                             "WHERE counter_id = @counter_id AND DATE(schedule_datetime) = @schedule_date"
+        
+        Using cmd As New MySqlCommand(query, conn)
+            cmd.Parameters.AddWithValue("@counter_id", counterId)
+            cmd.Parameters.AddWithValue("@schedule_date", selectedDate.ToString("yyyy-MM-dd"))
+            
+            Using reader As MySqlDataReader = cmd.ExecuteReader()
+                While reader.Read()
+                    bookedSlots.Add(reader.GetTimeSpan(0))
+                End While
+            End Using
+        End Using
+        
+        ' Generate time slots (from 8:00 AM to 5:00 PM in 30-minute intervals)
+        Dim startTime As New DateTime(selectedDate.Year, selectedDate.Month, selectedDate.Day, 8, 0, 0)
+        Dim endTime As New DateTime(selectedDate.Year, selectedDate.Month, selectedDate.Day, 17, 0, 0)
+        Dim interval As TimeSpan = TimeSpan.FromMinutes(30)
+        Dim currentTime As DateTime = startTime
+        
+        ' Find the earliest available time slot
+        While currentTime < endTime
+            If Not bookedSlots.Contains(currentTime.TimeOfDay) Then
+                selectedTimeSlot = currentTime.ToString("hh:mm tt", CultureInfo.InvariantCulture)
+                selectedDateTime = currentTime
+                Exit While
+            End If
+            currentTime = currentTime.Add(interval)
+        End While
+        
+        ' If no time slots are available, show a message
+        If String.IsNullOrEmpty(selectedTimeSlot) Then
+            selectedTimeSlot = "No available slots"
+        End If
+    End Sub
+
+    Private Sub UpdateUIWithSelection()
+        ' Update the UI to show automatically selected counter and time slot
+        If selectedCounterId <> -1 Then
+            Label3.Text = "3. Selected Counter: " & selectedCounterName
+            
+            If Not String.IsNullOrEmpty(selectedTimeSlot) AndAlso selectedTimeSlot <> "No available slots" Then
+                Label4.Text = "4. Selected Time Slot: " & selectedTimeSlot
+                btnGetTicket.Enabled = True
+            Else
+                Label4.Text = "4. Selected Time Slot: No available slots"
+                btnGetTicket.Enabled = False
+            End If
+        Else
+            Label3.Text = "3. Selected Counter: None available"
+            Label4.Text = "4. Selected Time Slot: N/A"
+            btnGetTicket.Enabled = False
+        End If
+    End Sub
+
+    ' CORRECTED: Function now correctly queries the 'username' column.
+    Private Function GetUserIdFromUsername(username As String) As Integer
+        Dim userId As Integer = -1 ' Return -1 if not found
+        Dim query As String = "SELECT user_id FROM users WHERE username = @username AND role = 'student' LIMIT 1"
+
+        Using conn As New MySqlConnection(DatabaseHelper.GetConnectionString())
+            Try
+                conn.Open()
+                Using cmd As New MySqlCommand(query, conn)
+                    cmd.Parameters.AddWithValue("@username", username)
+                    Dim result = cmd.ExecuteScalar()
+                    If result IsNot Nothing AndAlso Not IsDBNull(result) Then
+                        userId = Convert.ToInt32(result)
+                    End If
+                End Using
+            Catch ex As Exception
+                MessageBox.Show("Error finding student ID: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
+        End Using
+        Return userId
+    End Function
+
+    ' CORRECTED: This event handler now calls the updated 'GetUserIdFromUsername' function.
+    Private Sub btnGetTicket_Click(sender As Object, e As EventArgs) Handles btnGetTicket.Click
+        ' --- Validation ---
+        If String.IsNullOrWhiteSpace(txtStudentID.Text) Then
+            MessageBox.Show("Please enter your Student ID.", "Input Required", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        
+        If selectedCounterId = -1 Then
+            MessageBox.Show("No counter is available. Please try a different date.", "No Counter Available", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        
+        If selectedTimeSlot = "No available slots" OrElse String.IsNullOrEmpty(selectedTimeSlot) Then
+            MessageBox.Show("No available time slots for the selected date. Please try a different date.", "No Time Slots", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        ' --- Get User ID ---
+        Dim userId As Integer = GetUserIdFromUsername(txtStudentID.Text.Trim())
+        If userId = -1 Then
+            MessageBox.Show("Student ID not found. Please check and try again.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return
+        End If
+
+        ' --- Prepare Data ---
+        Dim isPriority As Integer = If(chkIsPriority.Checked, 1, 0)
+        Dim scheduleDate As DateTime = dtpScheduleDate.Value.Date
+        Dim finalScheduleDateTime As DateTime = scheduleDate.Add(selectedDateTime.TimeOfDay)
+
+        ' --- Database Insertion ---
+        Dim queueNumber As String = ""
+        Using conn As New MySqlConnection(DatabaseHelper.GetConnectionString())
+            conn.Open()
+            Dim transaction As MySqlTransaction = conn.BeginTransaction()
+            Try
+                ' Get counter prefix
+                Dim cmd As New MySqlCommand("SELECT counter_prefix FROM counters WHERE counter_id = @counter_id", conn, transaction)
+                cmd.Parameters.AddWithValue("@counter_id", selectedCounterId)
+                Dim prefix As String = cmd.ExecuteScalar().ToString()
+
+                ' Get next number for the day
+                cmd.CommandText = "SELECT COUNT(*) + 1 FROM queues WHERE counter_id = @counter_id AND DATE(schedule_datetime) = @schedule_date"
+                cmd.Parameters.AddWithValue("@schedule_date", finalScheduleDateTime.ToString("yyyy-MM-dd"))
+                Dim nextNum As Integer = Convert.ToInt32(cmd.ExecuteScalar())
+                queueNumber = prefix & nextNum.ToString("D3")
+
+                ' Insert into queues table
+                cmd.CommandText = "INSERT INTO queues (user_id, counter_id, queue_number, is_priority, status, schedule_datetime, created_at) " &
+                                  "VALUES (@user_id, @counter_id, @queue_number, @is_priority, 'waiting', @schedule_datetime, NOW())"
+                cmd.Parameters.AddWithValue("@user_id", userId)
+                cmd.Parameters.AddWithValue("@queue_number", queueNumber)
+                cmd.Parameters.AddWithValue("@is_priority", isPriority)
+                cmd.Parameters.AddWithValue("@schedule_datetime", finalScheduleDateTime)
+                cmd.ExecuteNonQuery()
+
+                transaction.Commit()
+
+                ' --- Show Success ---
+                lblQueueNumber.Text = queueNumber
+                pnlTicketResult.Visible = True
+
+            Catch ex As Exception
+                transaction.Rollback()
+                MessageBox.Show("Failed to create ticket: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
+        End Using
+    End Sub
+
+    Private Sub btnNewTransaction_Click(sender As Object, e As EventArgs) Handles btnNewTransaction.Click
+        ' Reset the form for a new transaction
+        txtStudentID.Clear()
+        dtpScheduleDate.Value = DateTime.Today
+        selectedCounterId = -1
+        selectedTimeSlot = ""
+        selectedCounterName = ""
+        pnlTicketResult.Visible = False
+        
+        ' Find best counter and time slot for today
+        FindBestCounterAndTimeSlot()
+    End Sub
+End Class

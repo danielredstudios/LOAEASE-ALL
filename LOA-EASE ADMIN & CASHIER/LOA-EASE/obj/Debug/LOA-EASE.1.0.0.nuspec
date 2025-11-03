@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>LOA-EASE</id>
+    <version>1.0.0</version>
+    <authors>LOA-EASE</authors>
+    <description>Package Description</description>
+    <repository type="git" />
+    <dependencies>
+      <group targetFramework="net8.0-windows7.0">
+        <dependency id="BCrypt.Net-Core" version="1.6.0" exclude="Build,Analyzers" />
+        <dependency id="MySql.Data" version="9.4.0" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+    <frameworkReferences>
+      <group targetFramework="net8.0-windows7.0">
+        <frameworkReference name="Microsoft.WindowsDesktop.App.WindowsForms" />
+      </group>
+    </frameworkReferences>
+  </metadata>
+  <files>
+    <file src="C:\Users\RED\source\repos\LOA-EASE\LOA-EASE\bin\Debug\net8.0-windows\LOA-EASE.runtimeconfig.json" target="lib\net8.0-windows7.0\LOA-EASE.runtimeconfig.json" />
+    <file src="C:\Users\RED\source\repos\LOA-EASE\LOA-EASE\bin\Debug\net8.0-windows\LOA-EASE.dll" target="lib\net8.0-windows7.0\LOA-EASE.dll" />
+  </files>
+</package>

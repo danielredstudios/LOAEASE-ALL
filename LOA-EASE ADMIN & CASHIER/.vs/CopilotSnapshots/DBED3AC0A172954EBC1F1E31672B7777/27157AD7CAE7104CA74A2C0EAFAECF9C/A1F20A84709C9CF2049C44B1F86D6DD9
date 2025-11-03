@@ -1,0 +1,225 @@
+﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
+Partial Class frmKiosk
+    Inherits System.Windows.Forms.Form
+
+    'Form overrides dispose to clean up the component list.
+    <System.Diagnostics.DebuggerNonUserCode()>
+    Protected Overrides Sub Dispose(ByVal disposing As Boolean)
+        Try
+            If disposing AndAlso components IsNot Nothing Then
+                components.Dispose()
+            End If
+        Finally
+            MyBase.Dispose(disposing)
+        End Try
+    End Sub
+
+    'Required by the Windows Form Designer
+    Private components As System.ComponentModel.IContainer
+
+    'NOTE: The following procedure is required by the Windows Form Designer
+    'It can be modified using the Windows Form Designer.  
+    'Do not modify it using the code editor.
+    <System.Diagnostics.DebuggerStepThrough()>
+    Private Sub InitializeComponent()
+        Me.lblTitle = New System.Windows.Forms.Label()
+        Me.Label1 = New System.Windows.Forms.Label()
+        Me.txtStudentID = New System.Windows.Forms.TextBox()
+        Me.Label2 = New System.Windows.Forms.Label()
+        Me.dtpScheduleDate = New System.Windows.Forms.DateTimePicker()
+        Me.Label3 = New System.Windows.Forms.Label()
+        Me.Label4 = New System.Windows.Forms.Label()
+        Me.chkIsPriority = New System.Windows.Forms.CheckBox()
+        Me.btnGetTicket = New System.Windows.Forms.Button()
+        Me.pnlTicketResult = New System.Windows.Forms.Panel()
+        Me.btnNewTransaction = New System.Windows.Forms.Button()
+        Me.lblQueueNumber = New System.Windows.Forms.Label()
+        Me.Label6 = New System.Windows.Forms.Label()
+        Me.pnlTicketResult.SuspendLayout()
+        Me.SuspendLayout()
+        '
+        'lblTitle
+        '
+        Me.lblTitle.Dock = System.Windows.Forms.DockStyle.Top
+        Me.lblTitle.Font = New System.Drawing.Font("Poppins", 27.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.lblTitle.ForeColor = System.Drawing.Color.White
+        Me.lblTitle.Location = New System.Drawing.Point(0, 0)
+        Me.lblTitle.Name = "lblTitle"
+        Me.lblTitle.Size = New System.Drawing.Size(584, 85)
+        Me.lblTitle.TabIndex = 0
+        Me.lblTitle.Text = "LOA-EASE KIOSK"
+        Me.lblTitle.TextAlign = System.Drawing.ContentAlignment.MiddleCenter
+        '
+        'Label1
+        '
+        Me.Label1.AutoSize = True
+        Me.Label1.Font = New System.Drawing.Font("Poppins", 12.0F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Label1.ForeColor = System.Drawing.Color.White
+        Me.Label1.Location = New System.Drawing.Point(60, 120)
+        Me.Label1.Name = "Label1"
+        Me.Label1.Size = New System.Drawing.Size(149, 28)
+        Me.Label1.TabIndex = 1
+        Me.Label1.Text = "1. Enter Student ID"
+        '
+        'txtStudentID
+        '
+        Me.txtStudentID.Font = New System.Drawing.Font("Poppins", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.txtStudentID.Location = New System.Drawing.Point(65, 151)
+        Me.txtStudentID.Name = "txtStudentID"
+        Me.txtStudentID.Size = New System.Drawing.Size(450, 36)
+        Me.txtStudentID.TabIndex = 2
+        '
+        'Label2
+        '
+        Me.Label2.AutoSize = True
+        Me.Label2.Font = New System.Drawing.Font("Poppins", 12.0F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Label2.ForeColor = System.Drawing.Color.White
+        Me.Label2.Location = New System.Drawing.Point(60, 205)
+        Me.Label2.Name = "Label2"
+        Me.Label2.Size = New System.Drawing.Size(127, 28)
+        Me.Label2.TabIndex = 3
+        Me.Label2.Text = "2. Select a Date"
+        '
+        'dtpScheduleDate
+        '
+        Me.dtpScheduleDate.Font = New System.Drawing.Font("Poppins", 14.25F)
+        Me.dtpScheduleDate.Location = New System.Drawing.Point(65, 236)
+        Me.dtpScheduleDate.Name = "dtpScheduleDate"
+        Me.dtpScheduleDate.Size = New System.Drawing.Size(450, 36)
+        Me.dtpScheduleDate.TabIndex = 4
+        '
+        'Label3
+        '
+        Me.Label3.AutoSize = True
+        Me.Label3.Font = New System.Drawing.Font("Poppins", 12.0F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Label3.ForeColor = System.Drawing.Color.White
+        Me.Label3.Location = New System.Drawing.Point(60, 290)
+        Me.Label3.Name = "Label3"
+        Me.Label3.Size = New System.Drawing.Size(242, 28)
+        Me.Label3.TabIndex = 5
+        Me.Label3.Text = "3. Selected Counter: Automatic"
+        '
+        'Label4
+        '
+        Me.Label4.AutoSize = True
+        Me.Label4.Font = New System.Drawing.Font("Poppins", 12.0F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Label4.ForeColor = System.Drawing.Color.White
+        Me.Label4.Location = New System.Drawing.Point(60, 330)
+        Me.Label4.Name = "Label4"
+        Me.Label4.Size = New System.Drawing.Size(250, 28)
+        Me.Label4.TabIndex = 7
+        Me.Label4.Text = "4. Selected Time Slot: Automatic"
+        '
+        'chkIsPriority
+        '
+        Me.chkIsPriority.AutoSize = True
+        Me.chkIsPriority.Font = New System.Drawing.Font("Poppins", 12.0F)
+        Me.chkIsPriority.ForeColor = System.Drawing.Color.FromArgb(CType(CType(255, Byte), Integer), CType(CType(199, Byte), Integer), CType(CType(44, Byte), Integer))
+        Me.chkIsPriority.Location = New System.Drawing.Point(65, 370)
+        Me.chkIsPriority.Name = "chkIsPriority"
+        Me.chkIsPriority.Size = New System.Drawing.Size(127, 32)
+        Me.chkIsPriority.TabIndex = 9
+        Me.chkIsPriority.Text = "Priority Lane"
+        Me.chkIsPriority.UseVisualStyleBackColor = True
+        '
+        'btnGetTicket
+        '
+        Me.btnGetTicket.BackColor = System.Drawing.Color.FromArgb(CType(CType(255, Byte), Integer), CType(CType(199, Byte), Integer), CType(CType(44, Byte), Integer))
+        Me.btnGetTicket.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.btnGetTicket.Font = New System.Drawing.Font("Poppins", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.btnGetTicket.ForeColor = System.Drawing.Color.FromArgb(CType(CType(0, Byte), Integer), CType(CType(51, Byte), Integer), CType(CType(102, Byte), Integer))
+        Me.btnGetTicket.Location = New System.Drawing.Point(65, 420)
+        Me.btnGetTicket.Name = "btnGetTicket"
+        Me.btnGetTicket.Size = New System.Drawing.Size(450, 56)
+        Me.btnGetTicket.TabIndex = 10
+        Me.btnGetTicket.Text = "GET QUEUE NUMBER"
+        Me.btnGetTicket.UseVisualStyleBackColor = False
+        '
+        'pnlTicketResult
+        '
+        Me.pnlTicketResult.Controls.Add(Me.btnNewTransaction)
+        Me.pnlTicketResult.Controls.Add(Me.lblQueueNumber)
+        Me.pnlTicketResult.Controls.Add(Me.Label6)
+        Me.pnlTicketResult.Location = New System.Drawing.Point(12, 88)
+        Me.pnlTicketResult.Name = "pnlTicketResult"
+        Me.pnlTicketResult.Size = New System.Drawing.Size(560, 513)
+        Me.pnlTicketResult.TabIndex = 11
+        Me.pnlTicketResult.Visible = False
+        '
+        'btnNewTransaction
+        '
+        Me.btnNewTransaction.BackColor = System.Drawing.Color.FromArgb(CType(CType(255, Byte), Integer), CType(CType(199, Byte), Integer), CType(CType(44, Byte), Integer))
+        Me.btnNewTransaction.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.btnNewTransaction.Font = New System.Drawing.Font("Poppins", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.btnNewTransaction.ForeColor = System.Drawing.Color.FromArgb(CType(CType(0, Byte), Integer), CType(CType(51, Byte), Integer), CType(CType(102, Byte), Integer))
+        Me.btnNewTransaction.Location = New System.Drawing.Point(53, 375)
+        Me.btnNewTransaction.Name = "btnNewTransaction"
+        Me.btnNewTransaction.Size = New System.Drawing.Size(450, 56)
+        Me.btnNewTransaction.TabIndex = 12
+        Me.btnNewTransaction.Text = "New Transaction"
+        Me.btnNewTransaction.UseVisualStyleBackColor = False
+        '
+        'lblQueueNumber
+        '
+        Me.lblQueueNumber.Font = New System.Drawing.Font("Poppins", 72.0F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.lblQueueNumber.ForeColor = System.Drawing.Color.FromArgb(CType(CType(255, Byte), Integer), CType(CType(199, Byte), Integer), CType(CType(44, Byte), Integer))
+        Me.lblQueueNumber.Location = New System.Drawing.Point(3, 158)
+        Me.lblQueueNumber.Name = "lblQueueNumber"
+        Me.lblQueueNumber.Size = New System.Drawing.Size(554, 151)
+        Me.lblQueueNumber.TabIndex = 1
+        Me.lblQueueNumber.Text = "C-001"
+        Me.lblQueueNumber.TextAlign = System.Drawing.ContentAlignment.MiddleCenter
+        '
+        'Label6
+        '
+        Me.Label6.Dock = System.Windows.Forms.DockStyle.Top
+        Me.Label6.Font = New System.Drawing.Font("Poppins", 24.0F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Label6.ForeColor = System.Drawing.Color.White
+        Me.Label6.Location = New System.Drawing.Point(0, 0)
+        Me.Label6.Name = "Label6"
+        Me.Label6.Size = New System.Drawing.Size(560, 137)
+        Me.Label6.TabIndex = 0
+        Me.Label6.Text = "Your Queue Number is:"
+        Me.Label6.TextAlign = System.Drawing.ContentAlignment.BottomCenter
+        '
+        'frmKiosk
+        '
+        Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
+        Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
+        Me.BackColor = System.Drawing.Color.FromArgb(CType(CType(0, Byte), Integer), CType(CType(51, Byte), Integer), CType(CType(102, Byte), Integer))
+        Me.ClientSize = New System.Drawing.Size(584, 611)
+        Me.Controls.Add(Me.pnlTicketResult)
+        Me.Controls.Add(Me.btnGetTicket)
+        Me.Controls.Add(Me.chkIsPriority)
+        Me.Controls.Add(Me.Label4)
+        Me.Controls.Add(Me.Label3)
+        Me.Controls.Add(Me.dtpScheduleDate)
+        Me.Controls.Add(Me.Label2)
+        Me.Controls.Add(Me.txtStudentID)
+        Me.Controls.Add(Me.Label1)
+        Me.Controls.Add(Me.lblTitle)
+        Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle
+        Me.MaximizeBox = False
+        Me.Name = "frmKiosk"
+        Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
+        Me.Text = "LOA-EASE Kiosk"
+        Me.pnlTicketResult.ResumeLayout(False)
+        Me.ResumeLayout(False)
+        Me.PerformLayout()
+
+    End Sub
+
+    Friend WithEvents lblTitle As Label
+    Friend WithEvents Label1 As Label
+    Friend WithEvents txtStudentID As TextBox
+    Friend WithEvents Label2 As Label
+    Friend WithEvents dtpScheduleDate As DateTimePicker
+    Friend WithEvents Label3 As Label
+    Friend WithEvents Label4 As Label
+    Friend WithEvents chkIsPriority As CheckBox
+    Friend WithEvents btnGetTicket As Button
+    Friend WithEvents pnlTicketResult As Panel
+    Friend WithEvents lblQueueNumber As Label
+    Friend WithEvents Label6 As Label
+    Friend WithEvents btnNewTransaction As Button
+End Class
