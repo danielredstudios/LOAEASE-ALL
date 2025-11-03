@@ -7,6 +7,7 @@ Public Class frmCashierDashboard
     Private ReadOnly _counterId As Integer
     Private ReadOnly _cashierFullName As String
     Private _currentServingQueueId As Integer? = Nothing
+    Private _servingStartTime As DateTime? = Nothing
     Private _isBreak As Boolean = False
 
     Private WithEvents QueueNotifyIcon As New NotifyIcon()
@@ -69,6 +70,15 @@ Public Class frmCashierDashboard
         RefreshQueueData()
     End Sub
 
+    Private Sub tmrServingTime_Tick(sender As Object, e As EventArgs) Handles tmrServingTime.Tick
+        If _servingStartTime.HasValue Then
+            Dim elapsed As TimeSpan = DateTime.Now - _servingStartTime.Value
+            Dim minutes As Integer = CInt(Math.Floor(elapsed.TotalMinutes))
+            Dim seconds As Integer = elapsed.Seconds
+            lblServingTime.Text = $"Serving Time: {minutes:D2}:{seconds:D2}"
+        End If
+    End Sub
+
     Private Sub RefreshQueueData()
         FetchNowServing()
         FetchWaitingList()
@@ -79,7 +89,7 @@ Public Class frmCashierDashboard
             Try
                 conn.Open()
                 Dim query As String = "
-                    SELECT q.queue_id, q.queue_number, q.purpose, q.visitor_id,
+                    SELECT q.queue_id, q.queue_number, q.purpose, q.visitor_id, q.called_at,
                            s.student_number, s.first_name, s.last_name, s.course,
                            v.full_name AS visitor_name
                     FROM queues q
@@ -160,6 +170,15 @@ Public Class frmCashierDashboard
         lblServingNumber.Text = reader("queue_number").ToString()
         lblPurpose.Text = $"Purpose of Visit: {reader("purpose")}"
 
+        ' Get and store the serving start time
+        If Not IsDBNull(reader("called_at")) Then
+            _servingStartTime = Convert.ToDateTime(reader("called_at"))
+            lblServingTime.Visible = True
+            If Not tmrServingTime.Enabled Then
+                tmrServingTime.Start()
+            End If
+        End If
+
         If Not IsDBNull(reader("visitor_id")) Then
             lblName.Text = $"Name: {reader("visitor_name")}"
             lblStudentNumber.Text = "Student Number: VISITOR"
@@ -180,6 +199,9 @@ Public Class frmCashierDashboard
 
     Private Sub ResetNowServingDisplay()
         _currentServingQueueId = Nothing
+        _servingStartTime = Nothing
+        tmrServingTime.Stop()
+        lblServingTime.Visible = False
         lblServingNumber.Text = "---"
         lblName.Text = "Name: ---"
         lblStudentNumber.Text = "Student Number: ---"
@@ -308,7 +330,11 @@ Public Class frmCashierDashboard
     Private Sub UpdateQueueStatus(newStatus As String)
         If Not _currentServingQueueId.HasValue Then Return
 
-        ExecuteNonQuery("UPDATE queues SET status = @newStatus WHERE queue_id = @queueId AND counter_id = @counterId",
+        Dim query As String = If(newStatus = "completed", 
+                                 "UPDATE queues SET status = @newStatus, completed_at = NOW() WHERE queue_id = @queueId AND counter_id = @counterId",
+                                 "UPDATE queues SET status = @newStatus WHERE queue_id = @queueId AND counter_id = @counterId")
+        
+        ExecuteNonQuery(query,
                         AddressOf RefreshQueueData,
                         New MySqlParameter("@newStatus", newStatus),
                         New MySqlParameter("@queueId", _currentServingQueueId.Value),
