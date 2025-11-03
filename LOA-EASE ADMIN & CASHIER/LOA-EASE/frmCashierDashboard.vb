@@ -299,6 +299,30 @@ Public Class frmCashierDashboard
     End Sub
 
     Private Sub btnToggleBreak_Click(sender As Object, e As EventArgs) Handles btnToggleBreak.Click
+        If Not _isBreak Then
+            Dim waitingCount As Integer = GetWaitingQueueCount()
+            
+            If waitingCount > 0 Then
+                Dim result As DialogResult = MessageBox.Show(
+                    $"You have {waitingCount} waiting queue(s).{vbCrLf}{vbCrLf}" &
+                    "Would you like to transfer them to another cashier before going on break?{vbCrLf}{vbCrLf}" &
+                    "• Click YES to transfer queues to another cashier{vbCrLf}" &
+                    "• Click NO to keep queues (they will remain in your queue){vbCrLf}" &
+                    "• Click CANCEL to abort break",
+                    "Transfer Queues?",
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Question)
+                
+                If result = DialogResult.Cancel Then
+                    Return
+                ElseIf result = DialogResult.Yes Then
+                    If Not ShowTransferDialog() Then
+                        Return
+                    End If
+                End If
+            End If
+        End If
+        
         _isBreak = Not _isBreak
         Dim newStatus As String = If(_isBreak, "break", "open")
         ExecuteNonQuery("UPDATE counter_schedules SET status = @status WHERE counter_id = @counterId",
@@ -310,6 +334,7 @@ Public Class frmCashierDashboard
                                 btnToggleBreak.Text = "Go on Break"
                                 btnToggleBreak.BackColor = Color.Goldenrod
                             End If
+                            RefreshQueueData()
                         End Sub,
                         New MySqlParameter("@status", newStatus),
                         New MySqlParameter("@counterId", _counterId))
@@ -326,6 +351,161 @@ Public Class frmCashierDashboard
     Private Sub btnLogout_Click(sender As Object, e As EventArgs) Handles btnLogout.Click
         Me.Close()
     End Sub
+
+    Private Function GetWaitingQueueCount() As Integer
+        Using conn As MySqlConnection = DatabaseHelper.GetConnection()
+            Try
+                conn.Open()
+                Dim query As String = "SELECT COUNT(*) FROM queues WHERE counter_id = @counterId AND status = 'waiting' AND DATE(schedule_datetime) = CURDATE()"
+                Using cmd As New MySqlCommand(query, conn)
+                    cmd.Parameters.AddWithValue("@counterId", _counterId)
+                    Return Convert.ToInt32(cmd.ExecuteScalar())
+                End Using
+            Catch ex As Exception
+                HandleDbError("getting waiting queue count", ex)
+                Return 0
+            End Try
+        End Using
+    End Function
+
+    Private Function ShowTransferDialog() As Boolean
+        Using transferForm As New Form()
+            transferForm.Text = "Transfer Queues to Another Cashier"
+            transferForm.StartPosition = FormStartPosition.CenterParent
+            transferForm.FormBorderStyle = FormBorderStyle.FixedDialog
+            transferForm.ClientSize = New Size(450, 300)
+            transferForm.MaximizeBox = False
+            transferForm.MinimizeBox = False
+
+            Dim lblTitle As New Label()
+            lblTitle.Text = "Select a cashier to transfer your waiting queues:"
+            lblTitle.Dock = DockStyle.Top
+            lblTitle.Padding = New Padding(10)
+            lblTitle.Font = New Font(Me.Font, FontStyle.Bold)
+            transferForm.Controls.Add(lblTitle)
+
+            Dim lstCashiers As New ListBox()
+            lstCashiers.Dock = DockStyle.Fill
+            lstCashiers.Font = New Font("Poppins", 10)
+            lstCashiers.ItemHeight = 30
+            transferForm.Controls.Add(lstCashiers)
+            lstCashiers.BringToFront()
+
+            Using conn As MySqlConnection = DatabaseHelper.GetConnection()
+                Try
+                    conn.Open()
+                    Dim query As String = "
+                        SELECT c.counter_id, c.cashier_id, c.full_name, co.counter_name, cs.status, cs.is_open
+                        FROM cashiers c
+                        JOIN counters co ON c.counter_id = co.counter_id
+                        LEFT JOIN counter_schedules cs ON c.counter_id = cs.counter_id
+                        WHERE c.counter_id != @currentCounterId 
+                        AND c.is_active = 1 
+                        AND c.role = 'cashier'
+                        AND (cs.is_open = 1 OR cs.is_open IS NULL)
+                        AND (cs.status = 'open' OR cs.status IS NULL)
+                        ORDER BY co.counter_name"
+                    
+                    Using cmd As New MySqlCommand(query, conn)
+                        cmd.Parameters.AddWithValue("@currentCounterId", _counterId)
+                        Using reader As MySqlDataReader = cmd.ExecuteReader()
+                            While reader.Read()
+                                Dim item As New With {
+                                    .CounterId = reader.GetInt32("counter_id"),
+                                    .CashierName = reader.GetString("full_name"),
+                                    .CounterName = reader.GetString("counter_name"),
+                                    .DisplayText = $"{reader.GetString("counter_name")} - {reader.GetString("full_name")}"
+                                }
+                                lstCashiers.Items.Add(item)
+                            End While
+                        End Using
+                    End Using
+                Catch ex As Exception
+                    MessageBox.Show("Error loading cashiers: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                    Return False
+                End Try
+            End Using
+
+            If lstCashiers.Items.Count = 0 Then
+                MessageBox.Show("No available cashiers found. All other cashiers are either offline or on break.", "No Available Cashiers", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return False
+            End If
+
+            lstCashiers.DisplayMember = "DisplayText"
+
+            Dim pnlButtons As New Panel()
+            pnlButtons.Dock = DockStyle.Bottom
+            pnlButtons.Height = 50
+            pnlButtons.Padding = New Padding(10)
+            transferForm.Controls.Add(pnlButtons)
+
+            Dim btnTransfer As New Button()
+            btnTransfer.Text = "Transfer Queues"
+            btnTransfer.DialogResult = DialogResult.OK
+            btnTransfer.Dock = DockStyle.Right
+            btnTransfer.Width = 130
+            btnTransfer.BackColor = Color.FromArgb(0, 123, 255)
+            btnTransfer.ForeColor = Color.White
+            btnTransfer.FlatStyle = FlatStyle.Flat
+            pnlButtons.Controls.Add(btnTransfer)
+
+            Dim btnCancel As New Button()
+            btnCancel.Text = "Cancel"
+            btnCancel.DialogResult = DialogResult.Cancel
+            btnCancel.Dock = DockStyle.Right
+            btnCancel.Width = 100
+            btnCancel.Margin = New Padding(0, 0, 10, 0)
+            pnlButtons.Controls.Add(btnCancel)
+
+            transferForm.AcceptButton = btnTransfer
+            transferForm.CancelButton = btnCancel
+
+            If transferForm.ShowDialog(Me) = DialogResult.OK AndAlso lstCashiers.SelectedItem IsNot Nothing Then
+                Dim selectedCashier = lstCashiers.SelectedItem
+                Dim targetCounterId As Integer = CType(selectedCashier, Object).CounterId
+                
+                Return TransferWaitingQueues(targetCounterId, CType(selectedCashier, Object).CashierName, CType(selectedCashier, Object).CounterName)
+            End If
+
+            Return False
+        End Using
+    End Function
+
+    Private Function TransferWaitingQueues(targetCounterId As Integer, targetCashierName As String, targetCounterName As String) As Boolean
+        Using conn As MySqlConnection = DatabaseHelper.GetConnection()
+            Try
+                conn.Open()
+                Dim query As String = "
+                    UPDATE queues 
+                    SET counter_id = @targetCounterId 
+                    WHERE counter_id = @currentCounterId 
+                    AND status = 'waiting' 
+                    AND DATE(schedule_datetime) = CURDATE()"
+                
+                Using cmd As New MySqlCommand(query, conn)
+                    cmd.Parameters.AddWithValue("@targetCounterId", targetCounterId)
+                    cmd.Parameters.AddWithValue("@currentCounterId", _counterId)
+                    
+                    Dim rowsAffected As Integer = cmd.ExecuteNonQuery()
+                    
+                    If rowsAffected > 0 Then
+                        MessageBox.Show(
+                            $"Successfully transferred {rowsAffected} queue(s) to {targetCounterName} - {targetCashierName}",
+                            "Transfer Successful",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information)
+                        Return True
+                    Else
+                        MessageBox.Show("No queues were transferred.", "Transfer Info", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                        Return True
+                    End If
+                End Using
+            Catch ex As Exception
+                MessageBox.Show($"Error transferring queues: {ex.Message}", "Transfer Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Return False
+            End Try
+        End Using
+    End Function
 
     Private Sub UpdateQueueStatus(newStatus As String)
         If Not _currentServingQueueId.HasValue Then Return
