@@ -28,6 +28,7 @@ Public Class frmAdminDashboard
         lblWelcome.Text = $"Welcome, {_adminFullName}"
 
         SetupDataGridViews()
+        SetupKPIPanel()
 
         RefreshAllData()
 
@@ -539,9 +540,141 @@ Public Class frmAdminDashboard
         dgvReports.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
     End Sub
 
+    Private Sub SetupKPIPanel()
+        ' Create a panel for KPIs at the top of the dashboard
+        Dim pnlKPI As New Panel() With {
+            .Name = "pnlKPI",
+            .Dock = DockStyle.Top,
+            .Height = 120,
+            .BackColor = Color.White,
+            .Padding = New Padding(20, 10, 20, 10)
+        }
+
+        ' Title label
+        Dim lblKPITitle As New Label() With {
+            .Text = "Today's Key Performance Indicators",
+            .Font = New Font("Poppins", 12.0F, FontStyle.Bold),
+            .AutoSize = True,
+            .Location = New Point(20, 10)
+        }
+        pnlKPI.Controls.Add(lblKPITitle)
+
+        ' Create KPI cards in a FlowLayoutPanel
+        Dim flpKPI As New FlowLayoutPanel() With {
+            .Dock = DockStyle.Fill,
+            .Padding = New Padding(0, 40, 0, 0),
+            .AutoScroll = False,
+            .WrapContents = True
+        }
+
+        ' Helper function to create KPI card
+        Dim CreateKPICard = Function(title As String, lblName As String, color As Color) As Panel
+            Dim card As New Panel() With {
+                .Size = New Size(150, 60),
+                .BackColor = color,
+                .Margin = New Padding(5)
+            }
+            
+            Dim lblValue As New Label() With {
+                .Name = lblName,
+                .Text = "0",
+                .Font = New Font("Poppins", 18.0F, FontStyle.Bold),
+                .ForeColor = Color.White,
+                .Location = New Point(10, 5),
+                .AutoSize = True
+            }
+            
+            Dim lblTitle As New Label() With {
+                .Text = title,
+                .Font = New Font("Poppins", 8.0F),
+                .ForeColor = Color.White,
+                .Location = New Point(10, 35),
+                .AutoSize = True
+            }
+            
+            card.Controls.Add(lblValue)
+            card.Controls.Add(lblTitle)
+            Return card
+        End Function
+
+        ' Add KPI cards
+        flpKPI.Controls.Add(CreateKPICard("Total Today", "lblKPITotalToday", Color.FromArgb(0, 123, 255)))
+        flpKPI.Controls.Add(CreateKPICard("Completed", "lblKPICompleted", Color.FromArgb(40, 167, 69)))
+        flpKPI.Controls.Add(CreateKPICard("Serving", "lblKPIServing", Color.FromArgb(23, 162, 184)))
+        flpKPI.Controls.Add(CreateKPICard("Waiting", "lblKPIWaiting", Color.FromArgb(255, 193, 7)))
+        flpKPI.Controls.Add(CreateKPICard("No-Show", "lblKPINoShow", Color.FromArgb(220, 53, 69)))
+        flpKPI.Controls.Add(CreateKPICard("Avg Time", "lblKPIAvgTime", Color.FromArgb(108, 117, 125)))
+
+        pnlKPI.Controls.Add(flpKPI)
+        
+        ' Add the KPI panel to the dashboard at the top
+        pnlDashboard.Controls.Add(pnlKPI)
+        pnlKPI.BringToFront()
+    End Sub
+
     Private Sub RefreshAllData()
         FetchCashierStatus()
         FetchAllQueues()
+        FetchDashboardKPIs()
+    End Sub
+
+    Private Sub FetchDashboardKPIs()
+        Using conn As MySqlConnection = DatabaseHelper.GetConnection()
+            Try
+                conn.Open()
+                Dim query As String = "
+                    SELECT 
+                        COUNT(*) AS TotalToday,
+                        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS Completed,
+                        SUM(CASE WHEN status = 'serving' THEN 1 ELSE 0 END) AS Serving,
+                        SUM(CASE WHEN status = 'waiting' THEN 1 ELSE 0 END) AS Waiting,
+                        SUM(CASE WHEN status = 'no-show' THEN 1 ELSE 0 END) AS NoShow,
+                        IFNULL(AVG(CASE 
+                            WHEN status IN ('completed', 'no-show') AND called_at IS NOT NULL AND completed_at IS NOT NULL 
+                            THEN TIMESTAMPDIFF(SECOND, called_at, completed_at) 
+                        END), 0) AS AvgServingTimeSec
+                    FROM queues 
+                    WHERE DATE(created_at) = CURDATE()"
+                Using cmd As New MySqlCommand(query, conn)
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        If reader.Read() Then
+                            Dim totalToday As Integer = Convert.ToInt32(reader("TotalToday"))
+                            Dim completed As Integer = Convert.ToInt32(reader("Completed"))
+                            Dim serving As Integer = Convert.ToInt32(reader("Serving"))
+                            Dim waiting As Integer = Convert.ToInt32(reader("Waiting"))
+                            Dim noShow As Integer = Convert.ToInt32(reader("NoShow"))
+                            Dim avgServingTimeSec As Double = Convert.ToDouble(reader("AvgServingTimeSec"))
+                            
+                            ' Update KPI labels if they exist
+                            UpdateKPILabels(totalToday, completed, serving, waiting, noShow, avgServingTimeSec)
+                        End If
+                    End Using
+                End Using
+            Catch ex As Exception
+                HandleDbError("fetching dashboard KPIs", ex)
+            End Try
+        End Using
+    End Sub
+
+    Private Sub UpdateKPILabels(totalToday As Integer, completed As Integer, serving As Integer, waiting As Integer, noShow As Integer, avgServingTimeSec As Double)
+        ' Find KPI labels in the dashboard panel (we'll create these next)
+        Dim lblTotalToday = TryCast(pnlDashboard.Controls.Find("lblKPITotalToday", True).FirstOrDefault(), Label)
+        Dim lblCompleted = TryCast(pnlDashboard.Controls.Find("lblKPICompleted", True).FirstOrDefault(), Label)
+        Dim lblServing = TryCast(pnlDashboard.Controls.Find("lblKPIServing", True).FirstOrDefault(), Label)
+        Dim lblWaiting = TryCast(pnlDashboard.Controls.Find("lblKPIWaiting", True).FirstOrDefault(), Label)
+        Dim lblNoShow = TryCast(pnlDashboard.Controls.Find("lblKPINoShow", True).FirstOrDefault(), Label)
+        Dim lblAvgTime = TryCast(pnlDashboard.Controls.Find("lblKPIAvgTime", True).FirstOrDefault(), Label)
+
+        If lblTotalToday IsNot Nothing Then lblTotalToday.Text = totalToday.ToString()
+        If lblCompleted IsNot Nothing Then lblCompleted.Text = completed.ToString()
+        If lblServing IsNot Nothing Then lblServing.Text = serving.ToString()
+        If lblWaiting IsNot Nothing Then lblWaiting.Text = waiting.ToString()
+        If lblNoShow IsNot Nothing Then lblNoShow.Text = noShow.ToString()
+        If lblAvgTime IsNot Nothing Then 
+            Dim minutes As Integer = CInt(Math.Floor(avgServingTimeSec / 60))
+            Dim seconds As Integer = CInt(avgServingTimeSec Mod 60)
+            lblAvgTime.Text = $"{minutes}m {seconds}s"
+        End If
     End Sub
 
     Private Sub FetchCashierStatus()
