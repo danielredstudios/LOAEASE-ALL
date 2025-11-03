@@ -373,23 +373,71 @@ Public Class frmCashierDashboard
             transferForm.Text = "Transfer Queues to Another Cashier"
             transferForm.StartPosition = FormStartPosition.CenterParent
             transferForm.FormBorderStyle = FormBorderStyle.FixedDialog
-            transferForm.ClientSize = New Size(450, 300)
+            transferForm.ClientSize = New Size(550, 450)
             transferForm.MaximizeBox = False
             transferForm.MinimizeBox = False
 
             Dim lblTitle As New Label()
-            lblTitle.Text = "Select a cashier to transfer your waiting queues:"
+            lblTitle.Text = "Your waiting queues to transfer:"
             lblTitle.Dock = DockStyle.Top
-            lblTitle.Padding = New Padding(10)
+            lblTitle.Padding = New Padding(10, 10, 10, 5)
             lblTitle.Font = New Font(Me.Font, FontStyle.Bold)
             transferForm.Controls.Add(lblTitle)
+
+            Dim lstQueues As New ListBox()
+            lstQueues.Dock = DockStyle.Top
+            lstQueues.Height = 100
+            lstQueues.Font = New Font("Poppins", 9)
+            lstQueues.SelectionMode = SelectionMode.None
+            lstQueues.BackColor = Color.FromArgb(248, 249, 250)
+            transferForm.Controls.Add(lstQueues)
+            lstQueues.BringToFront()
+
+            Using conn As MySqlConnection = DatabaseHelper.GetConnection()
+                Try
+                    conn.Open()
+                    Dim queueQuery As String = "
+                        SELECT q.queue_number, q.purpose,
+                               COALESCE(CONCAT(s.first_name, ' ', s.last_name), v.full_name) AS customer_name
+                        FROM queues q
+                        LEFT JOIN students s ON q.student_id = s.student_id
+                        LEFT JOIN visitors v ON q.visitor_id = v.visitor_id
+                        WHERE q.counter_id = @counterId 
+                        AND q.status = 'waiting' 
+                        AND DATE(q.schedule_datetime) = CURDATE()
+                        ORDER BY q.created_at"
+                    
+                    Using cmd As New MySqlCommand(queueQuery, conn)
+                        cmd.Parameters.AddWithValue("@counterId", _counterId)
+                        Using reader As MySqlDataReader = cmd.ExecuteReader()
+                            While reader.Read()
+                                Dim queueInfo As String = $"Queue {reader.GetString("queue_number")}"
+                                If Not reader.IsDBNull(reader.GetOrdinal("customer_name")) Then
+                                    queueInfo &= $" - {reader.GetString("customer_name")}"
+                                End If
+                                lstQueues.Items.Add(queueInfo)
+                            End While
+                        End Using
+                    End Using
+                Catch ex As Exception
+                    MessageBox.Show("Error loading queue information: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                    Return False
+                End Try
+            End Using
+
+            Dim lblCashierTitle As New Label()
+            lblCashierTitle.Text = "Select a cashier to transfer these queues to:"
+            lblCashierTitle.Dock = DockStyle.Top
+            lblCashierTitle.Padding = New Padding(10, 15, 10, 5)
+            lblCashierTitle.Font = New Font(Me.Font, FontStyle.Bold)
+            transferForm.Controls.Add(lblCashierTitle)
+            lblCashierTitle.BringToFront()
 
             Dim lstCashiers As New ListBox()
             lstCashiers.Dock = DockStyle.Fill
             lstCashiers.Font = New Font("Poppins", 10)
             lstCashiers.ItemHeight = 30
             transferForm.Controls.Add(lstCashiers)
-            lstCashiers.BringToFront()
 
             Using conn As MySqlConnection = DatabaseHelper.GetConnection()
                 Try
