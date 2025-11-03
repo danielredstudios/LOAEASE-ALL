@@ -258,7 +258,6 @@ Public Class DatabaseHelper
         Return Nothing
     End Function
 
-    ' Updated Function Signature
     Public Shared Function GetProgressiveLockoutDuration(username As String, Optional peekNext As Boolean = False) As Integer
         Try
             Using conn As MySqlConnection = GetConnection()
@@ -543,7 +542,6 @@ Public Class DatabaseHelper
         End Using
     End Function
 
-    ' Added functions below
     Public Shared Function GetSetting(key As String) As String
         Using conn As MySqlConnection = GetConnection()
             Try
@@ -565,7 +563,6 @@ Public Class DatabaseHelper
         Using conn As MySqlConnection = GetConnection()
             Try
                 conn.Open()
-                ' Use INSERT ... ON DUPLICATE KEY UPDATE for simplicity
                 Dim query As String = "INSERT INTO settings (setting_key, setting_value) VALUES (@key, @value) ON DUPLICATE KEY UPDATE setting_value = @value"
                 Using cmd As New MySqlCommand(query, conn)
                     cmd.Parameters.AddWithValue("@key", key)
@@ -598,7 +595,6 @@ Public Class DatabaseHelper
                         Throw New ArgumentException("Invalid user type specified for unlock.")
                 End Select
 
-                ' Update both is_locked and failed_login_attempts
                 Dim query As String = $"UPDATE {tableName} SET {isLockedColumn} = FALSE, failed_login_attempts = 0 WHERE {idColumn} = @userId"
                 Using cmd As New MySqlCommand(query, conn)
                     cmd.Parameters.AddWithValue("@userId", userId)

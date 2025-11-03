@@ -6,7 +6,6 @@ Public Class frmAddEditCounter
     Private ReadOnly _counterId As Integer
 
     Public Sub New()
-        ' Add mode
         InitializeComponent()
         _isEditMode = False
         Me.Text = "Add New Counter"
@@ -14,7 +13,6 @@ Public Class frmAddEditCounter
     End Sub
 
     Public Sub New(counterId As Integer)
-        ' Edit mode
         InitializeComponent()
         _isEditMode = True
         _counterId = counterId
@@ -66,8 +64,6 @@ Public Class frmAddEditCounter
             Dim transaction As MySqlTransaction = conn.BeginTransaction()
             Try
                 If _isEditMode Then
-                    ' --- UPDATE LOGIC ---
-                    ' 1. Update counter name
                     Dim updateCounterQuery As String = "UPDATE counters SET counter_name = @counterName WHERE counter_id = @counterId"
                     Using cmd As New MySqlCommand(updateCounterQuery, conn, transaction)
                         cmd.Parameters.AddWithValue("@counterName", txtCounterName.Text.Trim())
@@ -75,7 +71,6 @@ Public Class frmAddEditCounter
                         cmd.ExecuteNonQuery()
                     End Using
 
-                    ' 2. Update cashier info (or insert if they were somehow deleted)
                     Dim cashierQuery As String
                     If Not String.IsNullOrWhiteSpace(txtPassword.Text) Then
                         cashierQuery = "
@@ -99,15 +94,12 @@ Public Class frmAddEditCounter
                         cmd.ExecuteNonQuery()
                     End Using
                 Else
-                    ' --- ADD LOGIC ---
-                    ' 1. Insert new counter and get its ID
                     Dim insertCounterQuery As String = "INSERT INTO counters (counter_name) VALUES (@counterName); SELECT LAST_INSERT_ID();"
                     Dim newCounterId As Integer
                     Using cmd As New MySqlCommand(insertCounterQuery, conn, transaction)
                         cmd.Parameters.AddWithValue("@counterName", txtCounterName.Text.Trim())
                         newCounterId = Convert.ToInt32(cmd.ExecuteScalar())
                     End Using
-                    ' 2. Insert new cashier and assign to the new counter
                     If String.IsNullOrWhiteSpace(txtPassword.Text) Then
                         MessageBox.Show("Password is required for new cashiers.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
                         transaction.Rollback()
