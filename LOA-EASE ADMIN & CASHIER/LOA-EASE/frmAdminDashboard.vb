@@ -788,6 +788,35 @@ Public Class frmAdminDashboard
         If noResultsLabel IsNot Nothing Then noResultsLabel.Visible = Not filteredList.Any()
     End Sub
 
+    Private Sub txtSearchAllQueues_TextChanged(sender As Object, e As EventArgs) Handles txtSearchAllQueues.TextChanged
+        Dim searchText As String = txtSearchAllQueues.Text.Trim().ToLower()
+
+        Dim source = TryCast(dgvAllQueues.DataSource, BindingList(Of QueueLogItem))
+        If source Is Nothing Then Return
+
+        If String.IsNullOrEmpty(searchText) Then
+            If dgvAllQueues.Tag IsNot Nothing Then
+                Dim originalData = CType(dgvAllQueues.Tag, BindingList(Of QueueLogItem))
+                dgvAllQueues.DataSource = originalData
+                dgvAllQueues.Tag = Nothing
+                lblQueueTotal.Text = $"(Total: {originalData.Count})"
+            End If
+            Return
+        End If
+
+        If dgvAllQueues.Tag Is Nothing Then dgvAllQueues.Tag = source
+        Dim originalSource = CType(dgvAllQueues.Tag, BindingList(Of QueueLogItem))
+        Dim filteredList = New BindingList(Of QueueLogItem)(originalSource.Where(Function(queue)
+                                                                                      Return queue.QueueNumber.ToLower().Contains(searchText) OrElse
+                                                                                             queue.FullName.ToLower().Contains(searchText) OrElse
+                                                                                             queue.StudentNo.ToLower().Contains(searchText) OrElse
+                                                                                             queue.Counter.ToLower().Contains(searchText) OrElse
+                                                                                             queue.Status.ToLower().Contains(searchText)
+                                                                                  End Function).ToList())
+        dgvAllQueues.DataSource = filteredList
+        lblQueueTotal.Text = $"(Total: {filteredList.Count})"
+    End Sub
+
     Private Sub cboSortQueueLogs_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboSortQueueLogs.SelectedIndexChanged
         If queueLogsTable Is Nothing Then Return
 
