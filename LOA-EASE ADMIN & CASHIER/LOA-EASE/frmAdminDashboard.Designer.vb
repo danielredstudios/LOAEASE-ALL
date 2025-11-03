@@ -107,6 +107,13 @@ Partial Class frmAdminDashboard
         lblStartDate = New Label()
         cboReportType = New ComboBox()
         lblReportType = New Label()
+        tpCashierPerformance = New TabPage()
+        pnlCashierPerformanceReport = New Panel()
+        dgvCashierPerformance = New DataGridView()
+        pnlCashierPerfControls = New Panel()
+        btnGenerateCashierPerf = New Button()
+        dtpCashierPerfDate = New DateTimePicker()
+        lblCashierPerfDate = New Label()
         lblReports = New Label()
         pnlCashierManagement = New Panel()
         dgvCashiers = New DataGridView()
@@ -163,6 +170,10 @@ Partial Class frmAdminDashboard
         pnlQueueLogsReport.SuspendLayout()
         CType(dgvReports, ComponentModel.ISupportInitialize).BeginInit()
         pnlReportControls.SuspendLayout()
+        tpCashierPerformance.SuspendLayout()
+        pnlCashierPerformanceReport.SuspendLayout()
+        CType(dgvCashierPerformance, ComponentModel.ISupportInitialize).BeginInit()
+        pnlCashierPerfControls.SuspendLayout()
         pnlCashierManagement.SuspendLayout()
         CType(dgvCashiers, ComponentModel.ISupportInitialize).BeginInit()
         pnlCashierControls.SuspendLayout()
@@ -968,6 +979,7 @@ Partial Class frmAdminDashboard
         ' tabReports
         ' 
         tabReports.Controls.Add(tpQueueLogsReport)
+        tabReports.Controls.Add(tpCashierPerformance)
         tabReports.Dock = DockStyle.Fill
         tabReports.Font = New Font("Poppins", 9.0F)
         tabReports.Location = New Point(0, 50)
@@ -1114,6 +1126,87 @@ Partial Class frmAdminDashboard
         lblReportType.Size = New Size(82, 22)
         lblReportType.TabIndex = 0
         lblReportType.Text = "Report Type:"
+        ' 
+        ' tpCashierPerformance
+        ' 
+        tpCashierPerformance.Controls.Add(pnlCashierPerformanceReport)
+        tpCashierPerformance.Location = New Point(4, 31)
+        tpCashierPerformance.Name = "tpCashierPerformance"
+        tpCashierPerformance.Padding = New Padding(3)
+        tpCashierPerformance.Size = New Size(1002, 480)
+        tpCashierPerformance.TabIndex = 1
+        tpCashierPerformance.Text = "Cashier Performance"
+        tpCashierPerformance.UseVisualStyleBackColor = True
+        ' 
+        ' pnlCashierPerformanceReport
+        ' 
+        pnlCashierPerformanceReport.Controls.Add(dgvCashierPerformance)
+        pnlCashierPerformanceReport.Controls.Add(pnlCashierPerfControls)
+        pnlCashierPerformanceReport.Dock = DockStyle.Fill
+        pnlCashierPerformanceReport.Location = New Point(3, 3)
+        pnlCashierPerformanceReport.Name = "pnlCashierPerformanceReport"
+        pnlCashierPerformanceReport.Size = New Size(996, 474)
+        pnlCashierPerformanceReport.TabIndex = 0
+        ' 
+        ' dgvCashierPerformance
+        ' 
+        dgvCashierPerformance.AllowUserToAddRows = False
+        dgvCashierPerformance.AllowUserToDeleteRows = False
+        dgvCashierPerformance.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgvCashierPerformance.BackgroundColor = Color.White
+        dgvCashierPerformance.BorderStyle = BorderStyle.None
+        dgvCashierPerformance.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
+        dgvCashierPerformance.Dock = DockStyle.Fill
+        dgvCashierPerformance.Location = New Point(0, 60)
+        dgvCashierPerformance.Name = "dgvCashierPerformance"
+        dgvCashierPerformance.ReadOnly = True
+        dgvCashierPerformance.RowHeadersVisible = False
+        dgvCashierPerformance.Size = New Size(996, 414)
+        dgvCashierPerformance.TabIndex = 1
+        ' 
+        ' pnlCashierPerfControls
+        ' 
+        pnlCashierPerfControls.BackColor = Color.FromArgb(CByte(240), CByte(244), CByte(247))
+        pnlCashierPerfControls.Controls.Add(btnGenerateCashierPerf)
+        pnlCashierPerfControls.Controls.Add(dtpCashierPerfDate)
+        pnlCashierPerfControls.Controls.Add(lblCashierPerfDate)
+        pnlCashierPerfControls.Dock = DockStyle.Top
+        pnlCashierPerfControls.Location = New Point(0, 0)
+        pnlCashierPerfControls.Name = "pnlCashierPerfControls"
+        pnlCashierPerfControls.Size = New Size(996, 60)
+        pnlCashierPerfControls.TabIndex = 0
+        ' 
+        ' btnGenerateCashierPerf
+        ' 
+        btnGenerateCashierPerf.BackColor = Color.FromArgb(CByte(0), CByte(123), CByte(255))
+        btnGenerateCashierPerf.FlatAppearance.BorderSize = 0
+        btnGenerateCashierPerf.FlatStyle = FlatStyle.Flat
+        btnGenerateCashierPerf.Font = New Font("Poppins", 9.0F, FontStyle.Bold)
+        btnGenerateCashierPerf.ForeColor = Color.White
+        btnGenerateCashierPerf.Location = New Point(325, 15)
+        btnGenerateCashierPerf.Name = "btnGenerateCashierPerf"
+        btnGenerateCashierPerf.Size = New Size(130, 32)
+        btnGenerateCashierPerf.TabIndex = 2
+        btnGenerateCashierPerf.Text = "Generate Report"
+        btnGenerateCashierPerf.UseVisualStyleBackColor = False
+        ' 
+        ' dtpCashierPerfDate
+        ' 
+        dtpCashierPerfDate.Font = New Font("Poppins", 9.0F)
+        dtpCashierPerfDate.Location = New Point(120, 18)
+        dtpCashierPerfDate.Name = "dtpCashierPerfDate"
+        dtpCashierPerfDate.Size = New Size(190, 25)
+        dtpCashierPerfDate.TabIndex = 1
+        ' 
+        ' lblCashierPerfDate
+        ' 
+        lblCashierPerfDate.AutoSize = True
+        lblCashierPerfDate.Font = New Font("Poppins", 9.0F)
+        lblCashierPerfDate.Location = New Point(13, 21)
+        lblCashierPerfDate.Name = "lblCashierPerfDate"
+        lblCashierPerfDate.Size = New Size(100, 22)
+        lblCashierPerfDate.TabIndex = 0
+        lblCashierPerfDate.Text = "Select Date:"
         ' 
         ' lblReports
         ' 
@@ -1584,6 +1677,11 @@ Partial Class frmAdminDashboard
         CType(dgvReports, ComponentModel.ISupportInitialize).EndInit()
         pnlReportControls.ResumeLayout(False)
         pnlReportControls.PerformLayout()
+        tpCashierPerformance.ResumeLayout(False)
+        pnlCashierPerformanceReport.ResumeLayout(False)
+        CType(dgvCashierPerformance, ComponentModel.ISupportInitialize).EndInit()
+        pnlCashierPerfControls.ResumeLayout(False)
+        pnlCashierPerfControls.PerformLayout()
         pnlCashierManagement.ResumeLayout(False)
         CType(dgvCashiers, ComponentModel.ISupportInitialize).EndInit()
         pnlCashierControls.ResumeLayout(False)
@@ -1676,6 +1774,13 @@ Partial Class frmAdminDashboard
     Friend WithEvents pnlCashierHeader As Panel ' Renamed
     Friend WithEvents pnlCashierControls As Panel ' Renamed
     Friend WithEvents pnlReportControls As Panel
+    Friend WithEvents tpCashierPerformance As TabPage
+    Friend WithEvents pnlCashierPerformanceReport As Panel
+    Friend WithEvents dgvCashierPerformance As DataGridView
+    Friend WithEvents pnlCashierPerfControls As Panel
+    Friend WithEvents btnGenerateCashierPerf As Button
+    Friend WithEvents dtpCashierPerfDate As DateTimePicker
+    Friend WithEvents lblCashierPerfDate As Label
     Friend WithEvents pnlQueuesControls As Panel
     Friend WithEvents tabUserManagement As TabControl
     Friend WithEvents tpWithAccount As TabPage

@@ -1586,6 +1586,74 @@ Public Class frmAdminDashboard
         End Using
     End Sub
 
+    Private Sub btnGenerateCashierPerf_Click(sender As Object, e As EventArgs) Handles btnGenerateCashierPerf.Click
+        FetchCashierPerformanceData()
+    End Sub
+
+    Private Sub FetchCashierPerformanceData()
+        Dim selectedDate As Date = dtpCashierPerfDate.Value.Date
+        Dim performanceData As New BindingList(Of CashierPerformanceItem)()
+
+        Using conn As MySqlConnection = DatabaseHelper.GetConnection()
+            Try
+                conn.Open()
+                Dim query As String = "
+                    SELECT 
+                        c.full_name AS CashierName,
+                        co.counter_name AS Counter,
+                        COUNT(q.queue_id) AS TicketsServed,
+                        SUM(CASE WHEN q.status = 'completed' THEN 1 ELSE 0 END) AS Completed,
+                        SUM(CASE WHEN q.status = 'no-show' THEN 1 ELSE 0 END) AS NoShow,
+                        IFNULL(AVG(CASE 
+                            WHEN q.status IN ('completed', 'no-show') AND q.called_at IS NOT NULL AND q.completed_at IS NOT NULL 
+                            THEN TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at) 
+                        END), 0) AS AvgServingTimeSec,
+                        IFNULL(SUM(CASE 
+                            WHEN q.status IN ('completed', 'no-show') AND q.called_at IS NOT NULL AND q.completed_at IS NOT NULL 
+                            THEN TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at) 
+                        END), 0) AS TotalServingTimeSec
+                    FROM cashiers c
+                    JOIN counters co ON c.counter_id = co.counter_id
+                    LEFT JOIN queues q ON c.counter_id = q.counter_id 
+                        AND DATE(q.created_at) = @selectedDate
+                        AND q.status IN ('completed', 'no-show')
+                    WHERE c.is_active = 1
+                    GROUP BY c.cashier_id, c.full_name, co.counter_name
+                    ORDER BY TicketsServed DESC"
+                
+                Using cmd As New MySqlCommand(query, conn)
+                    cmd.Parameters.AddWithValue("@selectedDate", selectedDate)
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim avgSec As Double = Convert.ToDouble(reader("AvgServingTimeSec"))
+                            Dim totalSec As Integer = Convert.ToInt32(reader("TotalServingTimeSec"))
+                            
+                            Dim avgMin As Integer = CInt(Math.Floor(avgSec / 60))
+                            Dim avgSecRem As Integer = CInt(avgSec Mod 60)
+                            Dim totalMin As Integer = CInt(Math.Floor(totalSec / 60.0))
+                            Dim totalSecRem As Integer = totalSec Mod 60
+                            
+                            performanceData.Add(New CashierPerformanceItem With {
+                                .CashierName = reader("CashierName").ToString(),
+                                .Counter = reader("Counter").ToString(),
+                                .TicketsServed = Convert.ToInt32(reader("TicketsServed")),
+                                .Completed = Convert.ToInt32(reader("Completed")),
+                                .NoShow = Convert.ToInt32(reader("NoShow")),
+                                .AvgServingTime = $"{avgMin}m {avgSecRem}s",
+                                .TotalServingTime = $"{totalMin}m {totalSecRem}s"
+                            })
+                        End While
+                    End Using
+                End Using
+
+                dgvCashierPerformance.DataSource = performanceData
+                dgvCashierPerformance.ClearSelection()
+            Catch ex As Exception
+                HandleDbError("fetching cashier performance data", ex)
+            End Try
+        End Using
+    End Sub
+
     Private Sub dgvQueueLogs_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs) Handles dgvQueueLogs.CellFormatting
         If e.RowIndex < 0 OrElse e.ColumnIndex <> dgvQueueLogs.Columns("Status").Index OrElse e.Value Is Nothing Then Return
 
@@ -1808,6 +1876,16 @@ Private Sub dgvAllQueues_CellFormatting(sender As Object, e As DataGridViewCellF
         Console.WriteLine($"DataGridView Cashiers Error: {e.Exception.Message}")
         e.ThrowException = False
     End Sub
+End Class
+
+Public Class CashierPerformanceItem
+    Public Property CashierName As String
+    Public Property Counter As String
+    Public Property TicketsServed As Integer
+    Public Property Completed As Integer
+    Public Property NoShow As Integer
+    Public Property AvgServingTime As String
+    Public Property TotalServingTime As String
 End Class
 
 Public Class CashierStatusItem
