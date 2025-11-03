@@ -29,6 +29,7 @@ Public Class frmAdminDashboard
 
         SetupDataGridViews()
         SetupKPIPanel()
+        MakeDashboardResponsive()
 
         RefreshAllData()
 
@@ -676,6 +677,86 @@ Public Class frmAdminDashboard
         
         pnlDashboard.Controls.Add(pnlKPI)
         pnlKPI.BringToFront()
+    End Sub
+
+    Private Sub MakeDashboardResponsive()
+        pnlCashiersPanel.Location = New Point(0, 0)
+        pnlCashiersPanel.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left
+        pnlCashiersPanel.Width = 420
+        pnlCashiersPanel.Padding = New Padding(0, 0, 7, 0)
+        pnlCashiersPanel.BorderStyle = BorderStyle.FixedSingle
+        
+        pnlQueues.Location = New Point(435, 0)
+        pnlQueues.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        pnlQueues.Padding = New Padding(8, 0, 0, 0)
+        pnlQueues.BorderStyle = BorderStyle.FixedSingle
+        
+        AddHandler pnlCashiersPanel.Paint, Sub(sender, e)
+            Dim rect As Rectangle = pnlCashiersPanel.ClientRectangle
+            rect.Width -= 1
+            rect.Height -= 1
+            Using pen As New Pen(Color.FromArgb(222, 226, 230), 1)
+                e.Graphics.DrawRectangle(pen, rect)
+            End Using
+        End Sub
+        
+        AddHandler pnlQueues.Paint, Sub(sender, e)
+            Dim rect As Rectangle = pnlQueues.ClientRectangle
+            rect.Width -= 1
+            rect.Height -= 1
+            Using pen As New Pen(Color.FromArgb(222, 226, 230), 1)
+                e.Graphics.DrawRectangle(pen, rect)
+            End Using
+        End Sub
+        
+        AddHandler pnlDashboard.Resize, Sub()
+            If pnlCashiersPanel IsNot Nothing AndAlso pnlQueues IsNot Nothing Then
+                Dim availableWidth As Integer = pnlDashboard.Width
+                Dim kpiHeight As Integer = 0
+                
+                Dim kpiPanel = pnlDashboard.Controls.OfType(Of Panel)().FirstOrDefault(Function(p) p.Name = "pnlKPI")
+                If kpiPanel IsNot Nothing Then
+                    kpiHeight = kpiPanel.Height + 15
+                End If
+                
+                If availableWidth < 900 Then
+                    pnlCashiersPanel.Visible = True
+                    pnlQueues.Visible = True
+                    pnlCashiersPanel.Dock = DockStyle.None
+                    pnlQueues.Dock = DockStyle.None
+                    pnlCashiersPanel.Width = availableWidth
+                    pnlCashiersPanel.Height = CInt((pnlDashboard.Height - kpiHeight) * 0.35)
+                    pnlCashiersPanel.Location = New Point(0, kpiHeight)
+                    pnlCashiersPanel.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+                    
+                    Dim queuesY As Integer = kpiHeight + pnlCashiersPanel.Height + 15
+                    pnlQueues.Location = New Point(0, queuesY)
+                    pnlQueues.Width = availableWidth
+                    pnlQueues.Height = pnlDashboard.Height - queuesY
+                    pnlQueues.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+                Else
+                    pnlCashiersPanel.Visible = True
+                    pnlQueues.Visible = True
+                    pnlCashiersPanel.Dock = DockStyle.None
+                    pnlQueues.Dock = DockStyle.None
+                    
+                    Dim cashierWidth As Integer = Math.Max(380, CInt(availableWidth * 0.4))
+                    If cashierWidth > 500 Then cashierWidth = 500
+                    
+                    pnlCashiersPanel.Width = cashierWidth
+                    pnlCashiersPanel.Height = pnlDashboard.Height - kpiHeight
+                    pnlCashiersPanel.Location = New Point(0, kpiHeight)
+                    pnlCashiersPanel.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left
+                    
+                    pnlQueues.Location = New Point(cashierWidth + 15, kpiHeight)
+                    pnlQueues.Width = availableWidth - cashierWidth - 15
+                    pnlQueues.Height = pnlDashboard.Height - kpiHeight
+                    pnlQueues.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+                End If
+            End If
+        End Sub
+        
+        pnlDashboard.PerformLayout()
     End Sub
 
     Private Sub RefreshAllData()
