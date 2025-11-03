@@ -531,6 +531,7 @@ Public Class frmKiosk
 
         Dim queueNumber As String = ""
         Dim isPriority As Integer = If(chkIsPriority.Checked, 1, 0)
+        Dim visitorId As Integer = -1
 
         Using conn As New MySqlConnection(DatabaseHelper.GetConnectionString())
             conn.Open()
@@ -538,11 +539,12 @@ Public Class frmKiosk
             Try
                 If isVisitorMode Then
                     Dim fullName As String = txtFirstName.Text.Trim() & " " & txtLastName.Text.Trim()
-                    Dim insertVisitorQuery = "INSERT INTO visitors (full_name, created_at) VALUES (@full_name, NOW())"
+                    Dim insertVisitorQuery = "INSERT INTO visitors (full_name, email, created_at) VALUES (@full_name, @email, NOW())"
                     Using visitorCmd As New MySqlCommand(insertVisitorQuery, conn, transaction)
                         visitorCmd.Parameters.AddWithValue("@full_name", fullName)
+                        visitorCmd.Parameters.AddWithValue("@email", "visitor@kiosk.local")
                         visitorCmd.ExecuteNonQuery()
-                        studentId = CInt(visitorCmd.LastInsertedId)
+                        visitorId = CInt(visitorCmd.LastInsertedId)
                     End Using
                 End If
 
@@ -559,23 +561,27 @@ Public Class frmKiosk
                 Dim cmd As New MySqlCommand()
                 cmd.Connection = conn
                 cmd.Transaction = transaction
-                cmd.CommandText = "INSERT INTO queues (student_id, counter_id, queue_number, purpose, is_priority, status, schedule_datetime, created_at, is_visitor) " &
-                                  "VALUES (@student_id, @counter_id, @queue_number, @purpose, @is_priority, @status, @schedule_datetime, NOW(), @is_visitor)"
-                cmd.Parameters.AddWithValue("@student_id", studentId)
+                
+                If isVisitorMode Then
+                    cmd.CommandText = "INSERT INTO queues (visitor_id, counter_id, queue_number, purpose, is_priority, status, schedule_datetime, created_at) " &
+                                      "VALUES (@visitor_id, @counter_id, @queue_number, @purpose, @is_priority, @status, @schedule_datetime, NOW())"
+                    cmd.Parameters.AddWithValue("@visitor_id", visitorId)
+                Else
+                    cmd.CommandText = "INSERT INTO queues (student_id, counter_id, queue_number, purpose, is_priority, status, schedule_datetime, created_at) " &
+                                      "VALUES (@student_id, @counter_id, @queue_number, @purpose, @is_priority, @status, @schedule_datetime, NOW())"
+                    cmd.Parameters.AddWithValue("@student_id", studentId)
+                End If
+                
                 cmd.Parameters.AddWithValue("@counter_id", selectedCounterId)
                 cmd.Parameters.AddWithValue("@queue_number", queueNumber)
                 cmd.Parameters.AddWithValue("@purpose", purpose)
                 cmd.Parameters.AddWithValue("@is_priority", isPriority)
                 cmd.Parameters.AddWithValue("@status", status)
                 cmd.Parameters.AddWithValue("@schedule_datetime", selectedDateTime)
-                cmd.Parameters.AddWithValue("@is_visitor", If(isVisitorMode, 1, 0))
                 cmd.ExecuteNonQuery()
                 transaction.Commit()
 
                 ShowTicket(queueNumber)
-            Catch ex As MySqlException When ex.Number = 1054
-                transaction.Rollback()
-                MessageBox.Show("Database table needs updating. Please contact staff - missing is_visitor column.", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Catch ex As Exception
                 transaction.Rollback()
                 MessageBox.Show("Unable to create your ticket. Please try again or ask staff for help.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
