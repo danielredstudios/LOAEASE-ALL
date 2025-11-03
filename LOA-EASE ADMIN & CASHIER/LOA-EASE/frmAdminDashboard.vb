@@ -1388,7 +1388,15 @@ Public Class frmAdminDashboard
                                ELSE CONCAT(s.first_name, ' ', s.last_name)
                            END AS FullName,
                            q.status, q.created_at,
-                           c.full_name AS CashierName
+                           c.full_name AS CashierName,
+                           CASE
+                               WHEN q.status IN ('completed', 'no-show') AND q.called_at IS NOT NULL AND q.completed_at IS NOT NULL THEN
+                                   CONCAT(
+                                       FLOOR(TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at) / 60), 'm ',
+                                       MOD(TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at), 60), 's'
+                                   )
+                               ELSE 'N/A'
+                           END AS ServingDuration
                     FROM queues q
                     LEFT JOIN students s ON q.student_id = s.student_id
                     LEFT JOIN visitors v ON q.visitor_id = v.visitor_id
@@ -1430,7 +1438,8 @@ Public Class frmAdminDashboard
                             .FullName = reader("FullName").ToString(),
                             .Status = reader("status").ToString(),
                             .CreatedAt = Convert.ToDateTime(reader("created_at")).ToString("g"),
-                            .CashierName = If(reader.IsDBNull(reader.GetOrdinal("CashierName")), "N/A", reader("CashierName").ToString())
+                            .CashierName = If(reader.IsDBNull(reader.GetOrdinal("CashierName")), "N/A", reader("CashierName").ToString()),
+                            .ServingDuration = reader("ServingDuration").ToString()
                         })
                     End While
                 End Using
@@ -1689,6 +1698,7 @@ Public Class QueueLogAdminItem
     Public Property Status As String
     Public Property CreatedAt As String
     Public Property CashierName As String
+    Public Property ServingDuration As String
 End Class
 
 Public Class User
