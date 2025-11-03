@@ -498,6 +498,7 @@ Public Class frmAdminDashboard
         dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "QueueNumber", .HeaderText = "Queue No.", .DataPropertyName = "Queue Number"})
         dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "FullName", .HeaderText = "Full Name", .DataPropertyName = "Full Name"})
         dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "Status", .HeaderText = "Status", .DataPropertyName = "Status"})
+        dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "ServingDuration", .HeaderText = "Serving Duration", .DataPropertyName = "Serving Duration"})
         dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "CreatedAt", .HeaderText = "Date Created", .DataPropertyName = "Date Created"})
         dgvQueueLogs.SelectionMode = DataGridViewSelectionMode.FullRowSelect
         dgvQueueLogs.DefaultCellStyle.SelectionBackColor = Color.FromArgb(0, 85, 164)
@@ -629,7 +630,20 @@ Public Class frmAdminDashboard
                         ELSE CONCAT(s.first_name, ' ', s.last_name)
                     END AS 'Full Name',
                     q.status AS 'Status',
-                    q.created_at AS 'Date Created'
+                    q.created_at AS 'Date Created',
+                    CASE
+                        WHEN q.status IN ('completed', 'no-show') AND q.called_at IS NOT NULL AND q.completed_at IS NOT NULL THEN
+                            CONCAT(
+                                FLOOR(TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at) / 60), 'm ',
+                                MOD(TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at), 60), 's'
+                            )
+                        WHEN q.status = 'serving' AND q.called_at IS NOT NULL THEN
+                            CONCAT(
+                                FLOOR(TIMESTAMPDIFF(SECOND, q.called_at, NOW()) / 60), 'm ',
+                                MOD(TIMESTAMPDIFF(SECOND, q.called_at, NOW()), 60), 's'
+                            )
+                        ELSE 'N/A'
+                    END AS 'Serving Duration'
                 FROM queues q
                 LEFT JOIN students s ON q.student_id = s.student_id
                 LEFT JOIN visitors v ON q.visitor_id = v.visitor_id
