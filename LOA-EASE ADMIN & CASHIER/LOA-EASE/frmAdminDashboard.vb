@@ -541,71 +541,154 @@ Public Class frmAdminDashboard
     End Sub
 
     Private Sub SetupKPIPanel()
-        ' Create a panel for KPIs at the top of the dashboard
+        ' Create a panel for KPIs at the top of the dashboard with proper responsive design
         Dim pnlKPI As New Panel() With {
             .Name = "pnlKPI",
             .Dock = DockStyle.Top,
-            .Height = 120,
-            .BackColor = Color.White,
-            .Padding = New Padding(20, 10, 20, 10)
+            .AutoSize = True,
+            .MinimumSize = New Size(0, 140),
+            .BackColor = Color.FromArgb(248, 249, 250),
+            .Padding = New Padding(15, 15, 15, 15)
         }
 
-        ' Title label
+        ' Title label in a separate header panel
+        Dim pnlKPIHeader As New Panel() With {
+            .Dock = DockStyle.Top,
+            .Height = 40,
+            .BackColor = Color.Transparent
+        }
+        
         Dim lblKPITitle As New Label() With {
             .Text = "Today's Key Performance Indicators",
-            .Font = New Font("Poppins", 12.0F, FontStyle.Bold),
+            .Font = New Font("Poppins", 11.0F, FontStyle.Bold),
+            .ForeColor = Color.FromArgb(33, 37, 41),
             .AutoSize = True,
-            .Location = New Point(20, 10)
+            .Location = New Point(5, 8)
         }
-        pnlKPI.Controls.Add(lblKPITitle)
+        pnlKPIHeader.Controls.Add(lblKPITitle)
+        pnlKPI.Controls.Add(pnlKPIHeader)
 
-        ' Create KPI cards in a FlowLayoutPanel
-        Dim flpKPI As New FlowLayoutPanel() With {
-            .Dock = DockStyle.Fill,
-            .Padding = New Padding(0, 40, 0, 0),
-            .AutoScroll = False,
-            .WrapContents = True
+        ' Create KPI cards in a TableLayoutPanel for better responsive behavior
+        Dim tlpKPI As New TableLayoutPanel() With {
+            .Name = "tlpKPI",
+            .Dock = DockStyle.Top,
+            .AutoSize = True,
+            .ColumnCount = 6,
+            .RowCount = 1,
+            .Padding = New Padding(0, 5, 0, 5),
+            .BackColor = Color.Transparent
         }
 
-        ' Helper function to create KPI card
-        Dim CreateKPICard = Function(title As String, lblName As String, color As Color) As Panel
+        ' Configure columns to be equal width and responsive
+        For i As Integer = 0 To 5
+            tlpKPI.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 16.66F))
+        Next
+        tlpKPI.RowStyles.Add(New RowStyle(SizeType.AutoSize))
+
+        ' Helper function to create improved KPI card with better styling
+        Dim CreateKPICard = Function(title As String, lblName As String, color As Color, icon As String) As Panel
             Dim card As New Panel() With {
-                .Size = New Size(150, 60),
-                .BackColor = color,
-                .Margin = New Padding(5)
+                .MinimumSize = New Size(140, 90),
+                .Dock = DockStyle.Fill,
+                .BackColor = Color.White,
+                .Margin = New Padding(5, 5, 5, 5),
+                .Padding = New Padding(12, 12, 12, 12)
             }
             
+            ' Add subtle shadow effect with border
+            card.Paint = Sub(sender, e)
+                             Dim rect As Rectangle = card.ClientRectangle
+                             rect.Width -= 1
+                             rect.Height -= 1
+                             Using pen As New Pen(Color.FromArgb(222, 226, 230), 1)
+                                 e.Graphics.DrawRectangle(pen, rect)
+                             End Using
+                         End Sub
+            
+            ' Icon/Color indicator
+            Dim pnlColorBar As New Panel() With {
+                .Size = New Size(4, 25),
+                .BackColor = color,
+                .Location = New Point(8, 12)
+            }
+            card.Controls.Add(pnlColorBar)
+            
+            ' Title label at top
+            Dim lblCardTitle As New Label() With {
+                .Text = title.ToUpper(),
+                .Font = New Font("Poppins", 7.5F, FontStyle.Bold),
+                .ForeColor = Color.FromArgb(108, 117, 125),
+                .AutoSize = True,
+                .Location = New Point(18, 12)
+            }
+            card.Controls.Add(lblCardTitle)
+            
+            ' Value label - larger and prominent
             Dim lblValue As New Label() With {
                 .Name = lblName,
                 .Text = "0",
-                .Font = New Font("Poppins", 18.0F, FontStyle.Bold),
-                .ForeColor = Color.White,
-                .Location = New Point(10, 5),
-                .AutoSize = True
+                .Font = New Font("Poppins", 24.0F, FontStyle.Bold),
+                .ForeColor = color,
+                .AutoSize = True,
+                .Location = New Point(18, 35)
             }
-            
-            Dim lblTitle As New Label() With {
-                .Text = title,
-                .Font = New Font("Poppins", 8.0F),
-                .ForeColor = Color.White,
-                .Location = New Point(10, 35),
-                .AutoSize = True
-            }
-            
             card.Controls.Add(lblValue)
-            card.Controls.Add(lblTitle)
+            
+            ' Optional icon label
+            Dim lblIcon As New Label() With {
+                .Text = icon,
+                .Font = New Font("Segoe UI Symbol", 16.0F),
+                .ForeColor = Color.FromArgb(230, 230, 230),
+                .AutoSize = True
+            }
+            lblIcon.Location = New Point(card.Width - lblIcon.Width - 15, 12)
+            card.Controls.Add(lblIcon)
+            
             Return card
         End Function
 
-        ' Add KPI cards
-        flpKPI.Controls.Add(CreateKPICard("Total Today", "lblKPITotalToday", Color.FromArgb(0, 123, 255)))
-        flpKPI.Controls.Add(CreateKPICard("Completed", "lblKPICompleted", Color.FromArgb(40, 167, 69)))
-        flpKPI.Controls.Add(CreateKPICard("Serving", "lblKPIServing", Color.FromArgb(23, 162, 184)))
-        flpKPI.Controls.Add(CreateKPICard("Waiting", "lblKPIWaiting", Color.FromArgb(255, 193, 7)))
-        flpKPI.Controls.Add(CreateKPICard("No-Show", "lblKPINoShow", Color.FromArgb(220, 53, 69)))
-        flpKPI.Controls.Add(CreateKPICard("Avg Time", "lblKPIAvgTime", Color.FromArgb(108, 117, 125)))
+        ' Add KPI cards with icons
+        tlpKPI.Controls.Add(CreateKPICard("Total Today", "lblKPITotalToday", Color.FromArgb(0, 123, 255), "📊"), 0, 0)
+        tlpKPI.Controls.Add(CreateKPICard("Completed", "lblKPICompleted", Color.FromArgb(40, 167, 69), "✓"), 1, 0)
+        tlpKPI.Controls.Add(CreateKPICard("Serving", "lblKPIServing", Color.FromArgb(23, 162, 184), "👥"), 2, 0)
+        tlpKPI.Controls.Add(CreateKPICard("Waiting", "lblKPIWaiting", Color.FromArgb(255, 193, 7), "⏳"), 3, 0)
+        tlpKPI.Controls.Add(CreateKPICard("No-Show", "lblKPINoShow", Color.FromArgb(220, 53, 69), "✗"), 4, 0)
+        tlpKPI.Controls.Add(CreateKPICard("Avg Time", "lblKPIAvgTime", Color.FromArgb(108, 117, 125), "⏱"), 5, 0)
 
-        pnlKPI.Controls.Add(flpKPI)
+        pnlKPI.Controls.Add(tlpKPI)
+        
+        ' Add resize handler for responsive behavior
+        AddHandler pnlDashboard.Resize, Sub()
+            If tlpKPI IsNot Nothing Then
+                ' Adjust layout based on panel width
+                Dim dashboardWidth As Integer = pnlDashboard.Width
+                If dashboardWidth < 1200 Then
+                    ' Stack in 3 columns for medium screens
+                    tlpKPI.ColumnCount = 3
+                    tlpKPI.RowCount = 2
+                    tlpKPI.ColumnStyles.Clear()
+                    For i As Integer = 0 To 2
+                        tlpKPI.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 33.33F))
+                    Next
+                ElseIf dashboardWidth < 900 Then
+                    ' Stack in 2 columns for small screens
+                    tlpKPI.ColumnCount = 2
+                    tlpKPI.RowCount = 3
+                    tlpKPI.ColumnStyles.Clear()
+                    For i As Integer = 0 To 1
+                        tlpKPI.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50.0F))
+                    Next
+                Else
+                    ' Default 6 columns for large screens
+                    tlpKPI.ColumnCount = 6
+                    tlpKPI.RowCount = 1
+                    tlpKPI.ColumnStyles.Clear()
+                    For i As Integer = 0 To 5
+                        tlpKPI.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 16.66F))
+                    Next
+                End If
+            End If
+        End Sub
         
         ' Add the KPI panel to the dashboard at the top
         pnlDashboard.Controls.Add(pnlKPI)
