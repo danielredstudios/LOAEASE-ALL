@@ -1099,10 +1099,10 @@ Partial Class frmAdminDashboard
         cboReportType.DropDownStyle = ComboBoxStyle.DropDownList
         cboReportType.Font = New Font("Poppins", 9.0F)
         cboReportType.FormattingEnabled = True
-        cboReportType.Items.AddRange(New Object() {"Daily", "Weekly", "Monthly", "Annual"})
+        cboReportType.Items.AddRange(New Object() {"Daily", "Weekly", "Monthly", "Annual", "Cashier Performance"})
         cboReportType.Location = New Point(103, 18)
         cboReportType.Name = "cboReportType"
-        cboReportType.Size = New Size(100, 30)
+        cboReportType.Size = New Size(160, 30)
         cboReportType.TabIndex = 1
         ' 
         ' lblReportType

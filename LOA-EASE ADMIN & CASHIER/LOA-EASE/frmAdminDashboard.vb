@@ -498,6 +498,7 @@ Public Class frmAdminDashboard
         dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "QueueNumber", .HeaderText = "Queue No.", .DataPropertyName = "Queue Number"})
         dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "FullName", .HeaderText = "Full Name", .DataPropertyName = "Full Name"})
         dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "Status", .HeaderText = "Status", .DataPropertyName = "Status"})
+        dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "ServingDuration", .HeaderText = "Serving Time", .DataPropertyName = "Serving Time"})
         dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "CreatedAt", .HeaderText = "Date Created", .DataPropertyName = "Date Created"})
         dgvQueueLogs.SelectionMode = DataGridViewSelectionMode.FullRowSelect
         dgvQueueLogs.DefaultCellStyle.SelectionBackColor = Color.FromArgb(0, 85, 164)
@@ -629,6 +630,14 @@ Public Class frmAdminDashboard
                         ELSE CONCAT(s.first_name, ' ', s.last_name)
                     END AS 'Full Name',
                     q.status AS 'Status',
+                    CASE 
+                        WHEN q.called_at IS NOT NULL AND q.completed_at IS NOT NULL THEN
+                            CONCAT(
+                                FLOOR(TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at) / 60), 'm ',
+                                MOD(TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at), 60), 's'
+                            )
+                        ELSE '-'
+                    END AS 'Serving Time',
                     q.created_at AS 'Date Created'
                 FROM queues q
                 LEFT JOIN students s ON q.student_id = s.student_id
@@ -786,6 +795,35 @@ Public Class frmAdminDashboard
                                                                               End Function).ToList())
         dgvCashiers.DataSource = filteredList
         If noResultsLabel IsNot Nothing Then noResultsLabel.Visible = Not filteredList.Any()
+    End Sub
+
+    Private Sub txtSearchAllQueues_TextChanged(sender As Object, e As EventArgs) Handles txtSearchAllQueues.TextChanged
+        Dim searchText As String = txtSearchAllQueues.Text.Trim().ToLower()
+
+        Dim source = TryCast(dgvAllQueues.DataSource, BindingList(Of QueueLogItem))
+        If source Is Nothing Then Return
+
+        If String.IsNullOrEmpty(searchText) Then
+            If dgvAllQueues.Tag IsNot Nothing Then
+                Dim originalData = CType(dgvAllQueues.Tag, BindingList(Of QueueLogItem))
+                dgvAllQueues.DataSource = originalData
+                dgvAllQueues.Tag = Nothing
+                lblQueueTotal.Text = $"(Total: {originalData.Count})"
+            End If
+            Return
+        End If
+
+        If dgvAllQueues.Tag Is Nothing Then dgvAllQueues.Tag = source
+        Dim originalSource = CType(dgvAllQueues.Tag, BindingList(Of QueueLogItem))
+        Dim filteredList = New BindingList(Of QueueLogItem)(originalSource.Where(Function(queue)
+                                                                                      Return queue.QueueNumber.ToLower().Contains(searchText) OrElse
+                                                                                             queue.FullName.ToLower().Contains(searchText) OrElse
+                                                                                             queue.StudentNo.ToLower().Contains(searchText) OrElse
+                                                                                             queue.Counter.ToLower().Contains(searchText) OrElse
+                                                                                             queue.Status.ToLower().Contains(searchText)
+                                                                                  End Function).ToList())
+        dgvAllQueues.DataSource = filteredList
+        lblQueueTotal.Text = $"(Total: {filteredList.Count})"
     End Sub
 
     Private Sub cboSortQueueLogs_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboSortQueueLogs.SelectedIndexChanged
@@ -1362,6 +1400,12 @@ Public Class frmAdminDashboard
         Dim reportType As String = cboReportType.SelectedItem.ToString()
         Dim startDate As Date = dtpStartDate.Value.Date
         Dim endDate As Date = dtpEndDate.Value.Date
+
+        If reportType = "Cashier Performance" Then
+            FetchCashierPerformanceReport(startDate, endDate)
+            Return
+        End If
+
         Dim reportData As New BindingList(Of QueueLogAdminItem)()
 
         Using conn As MySqlConnection = DatabaseHelper.GetConnection()
@@ -1374,7 +1418,15 @@ Public Class frmAdminDashboard
                                ELSE CONCAT(s.first_name, ' ', s.last_name)
                            END AS FullName,
                            q.status, q.created_at,
-                           c.full_name AS CashierName
+                           c.full_name AS CashierName,
+                           CASE 
+                               WHEN q.called_at IS NOT NULL AND q.completed_at IS NOT NULL THEN
+                                   CONCAT(
+                                       FLOOR(TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at) / 60), 'm ',
+                                       MOD(TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at), 60), 's'
+                                   )
+                               ELSE '-'
+                           END AS ServingTime
                     FROM queues q
                     LEFT JOIN students s ON q.student_id = s.student_id
                     LEFT JOIN visitors v ON q.visitor_id = v.visitor_id
@@ -1416,7 +1468,8 @@ Public Class frmAdminDashboard
                             .FullName = reader("FullName").ToString(),
                             .Status = reader("status").ToString(),
                             .CreatedAt = Convert.ToDateTime(reader("created_at")).ToString("g"),
-                            .CashierName = If(reader.IsDBNull(reader.GetOrdinal("CashierName")), "N/A", reader("CashierName").ToString())
+                            .CashierName = If(reader.IsDBNull(reader.GetOrdinal("CashierName")), "N/A", reader("CashierName").ToString()),
+                            .ServingTime = reader("ServingTime").ToString()
                         })
                     End While
                 End Using
@@ -1426,6 +1479,67 @@ Public Class frmAdminDashboard
                 dgvReports.ClearSelection()
             Catch ex As Exception
                 HandleDbError("fetching report data", ex)
+            End Try
+        End Using
+    End Sub
+
+    Private Sub FetchCashierPerformanceReport(startDate As Date, endDate As Date)
+        Dim performanceData As New BindingList(Of CashierPerformanceItem)()
+
+        Using conn As MySqlConnection = DatabaseHelper.GetConnection()
+            Try
+                conn.Open()
+                Dim query As String = "
+                    SELECT 
+                        c.full_name AS CashierName,
+                        COUNT(q.queue_id) AS TotalServed,
+                        SUM(CASE WHEN q.status = 'completed' THEN 1 ELSE 0 END) AS CompletedQueues,
+                        SUM(CASE WHEN q.status = 'no-show' THEN 1 ELSE 0 END) AS NoShowQueues,
+                        AVG(CASE 
+                            WHEN q.called_at IS NOT NULL AND q.completed_at IS NOT NULL 
+                            THEN TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at) 
+                            ELSE NULL 
+                        END) AS AvgServingSeconds,
+                        SUM(CASE 
+                            WHEN q.called_at IS NOT NULL AND q.completed_at IS NOT NULL 
+                            THEN TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at) 
+                            ELSE 0 
+                        END) AS TotalServingSeconds
+                    FROM cashiers c
+                    LEFT JOIN counters co ON c.counter_id = co.counter_id
+                    LEFT JOIN queues q ON co.counter_id = q.counter_id 
+                        AND DATE(q.created_at) BETWEEN @startDate AND @endDate
+                        AND q.status IN ('completed', 'no-show')
+                    WHERE c.role = 'cashier'
+                    GROUP BY c.cashier_id, c.full_name
+                    ORDER BY TotalServed DESC"
+
+                Using cmd As New MySqlCommand(query, conn)
+                    cmd.Parameters.AddWithValue("@startDate", startDate)
+                    cmd.Parameters.AddWithValue("@endDate", endDate)
+
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim avgSeconds = If(reader.IsDBNull(reader.GetOrdinal("AvgServingSeconds")), 0, Convert.ToInt32(reader("AvgServingSeconds")))
+                            Dim totalSeconds = Convert.ToInt32(reader("TotalServingSeconds"))
+
+                            performanceData.Add(New CashierPerformanceItem With {
+                                .CashierName = reader("CashierName").ToString(),
+                                .TotalServed = Convert.ToInt32(reader("TotalServed")),
+                                .CompletedQueues = Convert.ToInt32(reader("CompletedQueues")),
+                                .NoShowQueues = Convert.ToInt32(reader("NoShowQueues")),
+                                .AverageServingTime = If(avgSeconds > 0, $"{Math.Floor(avgSeconds / 60.0)}m {avgSeconds Mod 60}s", "-"),
+                                .TotalServingTime = If(totalSeconds > 0, $"{Math.Floor(totalSeconds / 60.0)}m {totalSeconds Mod 60}s", "-")
+                            })
+                        End While
+                    End Using
+                End Using
+
+                dgvReports.DataSource = performanceData
+                lblReportTotal.Text = $"Total Cashiers: {performanceData.Count}"
+                dgvReports.ClearSelection()
+            Catch ex As Exception
+                HandleDbError("fetching cashier performance report", ex)
             End Try
         End Using
     End Sub
@@ -1675,6 +1789,7 @@ Public Class QueueLogAdminItem
     Public Property Status As String
     Public Property CreatedAt As String
     Public Property CashierName As String
+    Public Property ServingTime As String
 End Class
 
 Public Class User
@@ -1699,4 +1814,13 @@ Public Class StaffUser
     Public Property Role As String
     Public Property LastLogin As String
     Public Property ProcessedToday As Integer
+End Class
+
+Public Class CashierPerformanceItem
+    Public Property CashierName As String
+    Public Property TotalServed As Integer
+    Public Property AverageServingTime As String
+    Public Property TotalServingTime As String
+    Public Property CompletedQueues As Integer
+    Public Property NoShowQueues As Integer
 End Class

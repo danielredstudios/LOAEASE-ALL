@@ -279,6 +279,11 @@ Public Class frmCashierDashboard
     Private Sub btnToggleBreak_Click(sender As Object, e As EventArgs) Handles btnToggleBreak.Click
         _isBreak = Not _isBreak
         Dim newStatus As String = If(_isBreak, "break", "open")
+        
+        If _isBreak Then
+            RedistributeWaitingQueues()
+        End If
+        
         ExecuteNonQuery("UPDATE counter_schedules SET status = @status WHERE counter_id = @counterId",
                         Sub()
                             If _isBreak Then
@@ -302,13 +307,21 @@ Public Class frmCashierDashboard
     End Sub
 
     Private Sub btnLogout_Click(sender As Object, e As EventArgs) Handles btnLogout.Click
+        RedistributeWaitingQueues()
         Me.Close()
     End Sub
 
     Private Sub UpdateQueueStatus(newStatus As String)
         If Not _currentServingQueueId.HasValue Then Return
 
-        ExecuteNonQuery("UPDATE queues SET status = @newStatus WHERE queue_id = @queueId AND counter_id = @counterId",
+        Dim query As String
+        If newStatus = "completed" Then
+            query = "UPDATE queues SET status = @newStatus, completed_at = NOW() WHERE queue_id = @queueId AND counter_id = @counterId"
+        Else
+            query = "UPDATE queues SET status = @newStatus WHERE queue_id = @queueId AND counter_id = @counterId"
+        End If
+
+        ExecuteNonQuery(query,
                         AddressOf RefreshQueueData,
                         New MySqlParameter("@newStatus", newStatus),
                         New MySqlParameter("@queueId", _currentServingQueueId.Value),
@@ -354,6 +367,91 @@ Public Class frmCashierDashboard
 
         ExecuteNonQuery("UPDATE counter_schedules SET is_open = 0 WHERE counter_id = @counterId", Nothing, New MySqlParameter("@counterId", _counterId))
         Application.OpenForms("frmLogin").Show()
+    End Sub
+
+    Private Sub RedistributeWaitingQueues()
+        Using conn As MySqlConnection = DatabaseHelper.GetConnection()
+            Try
+                conn.Open()
+                Dim transaction As MySqlTransaction = conn.BeginTransaction()
+                Try
+                    Dim getAvailableCountersQuery As String = "
+                        SELECT cs.counter_id 
+                        FROM counter_schedules cs
+                        WHERE cs.is_open = 1 
+                        AND cs.status = 'open' 
+                        AND cs.counter_id != @currentCounterId
+                        ORDER BY cs.counter_id"
+                    
+                    Dim availableCounters As New List(Of Integer)
+                    Using cmd As New MySqlCommand(getAvailableCountersQuery, conn, transaction)
+                        cmd.Parameters.AddWithValue("@currentCounterId", _counterId)
+                        Using reader As MySqlDataReader = cmd.ExecuteReader()
+                            While reader.Read()
+                                availableCounters.Add(reader.GetInt32("counter_id"))
+                            End While
+                        End Using
+                    End Using
+
+                    If availableCounters.Count = 0 Then
+                        transaction.Commit()
+                        Return
+                    End If
+
+                    Dim getQueuesToRedistributeQuery As String = "
+                        SELECT queue_id, status 
+                        FROM queues 
+                        WHERE counter_id = @counterId 
+                        AND status IN ('waiting', 'serving') 
+                        AND DATE(schedule_datetime) = CURDATE()
+                        ORDER BY 
+                            CASE WHEN status = 'serving' THEN 0 ELSE 1 END,
+                            is_priority DESC, 
+                            created_at ASC"
+                    
+                    Dim queuesToRedistribute As New List(Of Tuple(Of Integer, String))
+                    Using cmd As New MySqlCommand(getQueuesToRedistributeQuery, conn, transaction)
+                        cmd.Parameters.AddWithValue("@counterId", _counterId)
+                        Using reader As MySqlDataReader = cmd.ExecuteReader()
+                            While reader.Read()
+                                queuesToRedistribute.Add(New Tuple(Of Integer, String)(
+                                    reader.GetInt32("queue_id"),
+                                    reader.GetString("status")))
+                            End While
+                        End Using
+                    End Using
+
+                    Dim counterIndex As Integer = 0
+                    For Each queueInfo In queuesToRedistribute
+                        Dim queueId As Integer = queueInfo.Item1
+                        Dim queueStatus As String = queueInfo.Item2
+                        Dim targetCounterId As Integer = availableCounters(counterIndex Mod availableCounters.Count)
+                        
+                        Dim updateQuery As String
+                        If queueStatus = "serving" Then
+                            updateQuery = "UPDATE queues SET counter_id = @newCounterId, status = 'waiting' WHERE queue_id = @queueId"
+                        Else
+                            updateQuery = "UPDATE queues SET counter_id = @newCounterId WHERE queue_id = @queueId"
+                        End If
+                        
+                        Using cmd As New MySqlCommand(updateQuery, conn, transaction)
+                            cmd.Parameters.AddWithValue("@newCounterId", targetCounterId)
+                            cmd.Parameters.AddWithValue("@queueId", queueId)
+                            cmd.ExecuteNonQuery()
+                        End Using
+                        
+                        counterIndex += 1
+                    Next
+
+                    transaction.Commit()
+                Catch ex As Exception
+                    transaction.Rollback()
+                    Throw
+                End Try
+            Catch ex As Exception
+                MessageBox.Show($"Error redistributing queues: {ex.Message}", "Redistribution Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            End Try
+        End Using
     End Sub
 
     Private Sub HandleDbError(action As String, ex As Exception)
