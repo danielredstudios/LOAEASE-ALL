@@ -541,7 +541,6 @@ Public Class frmAdminDashboard
     End Sub
 
     Private Sub SetupKPIPanel()
-        ' Create a panel for KPIs at the top of the dashboard with proper responsive design
         Dim pnlKPI As New Panel() With {
             .Name = "pnlKPI",
             .Dock = DockStyle.Top,
@@ -551,7 +550,6 @@ Public Class frmAdminDashboard
             .Padding = New Padding(15, 15, 15, 15)
         }
 
-        ' Title label in a separate header panel
         Dim pnlKPIHeader As New Panel() With {
             .Dock = DockStyle.Top,
             .Height = 40,
@@ -568,7 +566,6 @@ Public Class frmAdminDashboard
         pnlKPIHeader.Controls.Add(lblKPITitle)
         pnlKPI.Controls.Add(pnlKPIHeader)
 
-        ' Create KPI cards in a TableLayoutPanel for better responsive behavior
         Dim tlpKPI As New TableLayoutPanel() With {
             .Name = "tlpKPI",
             .Dock = DockStyle.Top,
@@ -579,13 +576,11 @@ Public Class frmAdminDashboard
             .BackColor = Color.Transparent
         }
 
-        ' Configure columns to be equal width and responsive
         For i As Integer = 0 To 5
             tlpKPI.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 16.66F))
         Next
         tlpKPI.RowStyles.Add(New RowStyle(SizeType.AutoSize))
 
-        ' Helper function to create improved KPI card with better styling
         Dim CreateKPICard = Function(title As String, lblName As String, color As Color, icon As String) As Panel
             Dim card As New Panel() With {
                 .MinimumSize = New Size(140, 90),
@@ -595,17 +590,15 @@ Public Class frmAdminDashboard
                 .Padding = New Padding(12, 12, 12, 12)
             }
             
-            ' Add subtle shadow effect with border
-            card.Paint = Sub(sender, e)
-                             Dim rect As Rectangle = card.ClientRectangle
-                             rect.Width -= 1
-                             rect.Height -= 1
-                             Using pen As New Pen(Color.FromArgb(222, 226, 230), 1)
-                                 e.Graphics.DrawRectangle(pen, rect)
-                             End Using
-                         End Sub
+            AddHandler card.Paint, Sub(sender, e)
+                Dim rect As Rectangle = card.ClientRectangle
+                rect.Width -= 1
+                rect.Height -= 1
+                Using pen As New Pen(Color.FromArgb(222, 226, 230), 1)
+                    e.Graphics.DrawRectangle(pen, rect)
+                End Using
+            End Sub
             
-            ' Icon/Color indicator
             Dim pnlColorBar As New Panel() With {
                 .Size = New Size(4, 25),
                 .BackColor = color,
@@ -613,7 +606,6 @@ Public Class frmAdminDashboard
             }
             card.Controls.Add(pnlColorBar)
             
-            ' Title label at top
             Dim lblCardTitle As New Label() With {
                 .Text = title.ToUpper(),
                 .Font = New Font("Poppins", 7.5F, FontStyle.Bold),
@@ -623,7 +615,6 @@ Public Class frmAdminDashboard
             }
             card.Controls.Add(lblCardTitle)
             
-            ' Value label - larger and prominent
             Dim lblValue As New Label() With {
                 .Name = lblName,
                 .Text = "0",
@@ -634,7 +625,6 @@ Public Class frmAdminDashboard
             }
             card.Controls.Add(lblValue)
             
-            ' Optional icon label
             Dim lblIcon As New Label() With {
                 .Text = icon,
                 .Font = New Font("Segoe UI Symbol", 16.0F),
@@ -647,7 +637,6 @@ Public Class frmAdminDashboard
             Return card
         End Function
 
-        ' Add KPI cards with icons
         tlpKPI.Controls.Add(CreateKPICard("Total Today", "lblKPITotalToday", Color.FromArgb(0, 123, 255), "📊"), 0, 0)
         tlpKPI.Controls.Add(CreateKPICard("Completed", "lblKPICompleted", Color.FromArgb(40, 167, 69), "✓"), 1, 0)
         tlpKPI.Controls.Add(CreateKPICard("Serving", "lblKPIServing", Color.FromArgb(23, 162, 184), "👥"), 2, 0)
@@ -657,13 +646,10 @@ Public Class frmAdminDashboard
 
         pnlKPI.Controls.Add(tlpKPI)
         
-        ' Add resize handler for responsive behavior
         AddHandler pnlDashboard.Resize, Sub()
             If tlpKPI IsNot Nothing Then
-                ' Adjust layout based on panel width
                 Dim dashboardWidth As Integer = pnlDashboard.Width
                 If dashboardWidth < 1200 Then
-                    ' Stack in 3 columns for medium screens
                     tlpKPI.ColumnCount = 3
                     tlpKPI.RowCount = 2
                     tlpKPI.ColumnStyles.Clear()
@@ -671,7 +657,6 @@ Public Class frmAdminDashboard
                         tlpKPI.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 33.33F))
                     Next
                 ElseIf dashboardWidth < 900 Then
-                    ' Stack in 2 columns for small screens
                     tlpKPI.ColumnCount = 2
                     tlpKPI.RowCount = 3
                     tlpKPI.ColumnStyles.Clear()
@@ -679,7 +664,6 @@ Public Class frmAdminDashboard
                         tlpKPI.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50.0F))
                     Next
                 Else
-                    ' Default 6 columns for large screens
                     tlpKPI.ColumnCount = 6
                     tlpKPI.RowCount = 1
                     tlpKPI.ColumnStyles.Clear()
@@ -690,7 +674,6 @@ Public Class frmAdminDashboard
             End If
         End Sub
         
-        ' Add the KPI panel to the dashboard at the top
         pnlDashboard.Controls.Add(pnlKPI)
         pnlKPI.BringToFront()
     End Sub
@@ -740,7 +723,6 @@ Public Class frmAdminDashboard
     End Sub
 
     Private Sub UpdateKPILabels(totalToday As Integer, completed As Integer, serving As Integer, waiting As Integer, noShow As Integer, avgServingTimeSec As Double)
-        ' Find KPI labels in the dashboard panel (we'll create these next)
         Dim lblTotalToday = TryCast(pnlDashboard.Controls.Find("lblKPITotalToday", True).FirstOrDefault(), Label)
         Dim lblCompleted = TryCast(pnlDashboard.Controls.Find("lblKPICompleted", True).FirstOrDefault(), Label)
         Dim lblServing = TryCast(pnlDashboard.Controls.Find("lblKPIServing", True).FirstOrDefault(), Label)
