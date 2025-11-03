@@ -709,7 +709,7 @@ Public Class frmAdminDashboard
             End Using
         End Sub
         
-        AddHandler pnlDashboard.Resize, Sub()
+        Dim resizeHandler As Action = Sub()
             If pnlCashiersPanel IsNot Nothing AndAlso pnlQueues IsNot Nothing Then
                 Dim availableWidth As Integer = pnlDashboard.Width
                 Dim kpiHeight As Integer = 0
@@ -756,7 +756,11 @@ Public Class frmAdminDashboard
             End If
         End Sub
         
-        pnlDashboard.PerformLayout()
+        AddHandler pnlDashboard.Resize, Sub()
+            resizeHandler()
+        End Sub
+        
+        resizeHandler()
     End Sub
 
     Private Sub RefreshAllData()
