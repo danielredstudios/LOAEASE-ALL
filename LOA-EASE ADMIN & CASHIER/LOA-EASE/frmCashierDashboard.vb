@@ -314,7 +314,14 @@ Public Class frmCashierDashboard
     Private Sub UpdateQueueStatus(newStatus As String)
         If Not _currentServingQueueId.HasValue Then Return
 
-        ExecuteNonQuery("UPDATE queues SET status = @newStatus WHERE queue_id = @queueId AND counter_id = @counterId",
+        Dim query As String
+        If newStatus = "completed" Then
+            query = "UPDATE queues SET status = @newStatus, completed_at = NOW() WHERE queue_id = @queueId AND counter_id = @counterId"
+        Else
+            query = "UPDATE queues SET status = @newStatus WHERE queue_id = @queueId AND counter_id = @counterId"
+        End If
+
+        ExecuteNonQuery(query,
                         AddressOf RefreshQueueData,
                         New MySqlParameter("@newStatus", newStatus),
                         New MySqlParameter("@queueId", _currentServingQueueId.Value),
