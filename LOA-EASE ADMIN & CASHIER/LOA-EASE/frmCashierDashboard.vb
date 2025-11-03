@@ -391,29 +391,42 @@ Public Class frmCashierDashboard
                         Return
                     End If
 
-                    Dim getWaitingQueuesQuery As String = "
-                        SELECT queue_id 
+                    Dim getQueuesToRedistributeQuery As String = "
+                        SELECT queue_id, status 
                         FROM queues 
                         WHERE counter_id = @counterId 
-                        AND status = 'waiting' 
+                        AND status IN ('waiting', 'serving') 
                         AND DATE(schedule_datetime) = CURDATE()
-                        ORDER BY is_priority DESC, created_at ASC"
+                        ORDER BY 
+                            CASE WHEN status = 'serving' THEN 0 ELSE 1 END,
+                            is_priority DESC, 
+                            created_at ASC"
                     
-                    Dim waitingQueueIds As New List(Of Integer)
-                    Using cmd As New MySqlCommand(getWaitingQueuesQuery, conn, transaction)
+                    Dim queuesToRedistribute As New List(Of Tuple(Of Integer, String))
+                    Using cmd As New MySqlCommand(getQueuesToRedistributeQuery, conn, transaction)
                         cmd.Parameters.AddWithValue("@counterId", _counterId)
                         Using reader As MySqlDataReader = cmd.ExecuteReader()
                             While reader.Read()
-                                waitingQueueIds.Add(reader.GetInt32("queue_id"))
+                                queuesToRedistribute.Add(New Tuple(Of Integer, String)(
+                                    reader.GetInt32("queue_id"),
+                                    reader.GetString("status")))
                             End While
                         End Using
                     End Using
 
                     Dim counterIndex As Integer = 0
-                    For Each queueId In waitingQueueIds
+                    For Each queueInfo In queuesToRedistribute
+                        Dim queueId As Integer = queueInfo.Item1
+                        Dim queueStatus As String = queueInfo.Item2
                         Dim targetCounterId As Integer = availableCounters(counterIndex Mod availableCounters.Count)
                         
-                        Dim updateQuery As String = "UPDATE queues SET counter_id = @newCounterId WHERE queue_id = @queueId"
+                        Dim updateQuery As String
+                        If queueStatus = "serving" Then
+                            updateQuery = "UPDATE queues SET counter_id = @newCounterId, status = 'waiting' WHERE queue_id = @queueId"
+                        Else
+                            updateQuery = "UPDATE queues SET counter_id = @newCounterId WHERE queue_id = @queueId"
+                        End If
+                        
                         Using cmd As New MySqlCommand(updateQuery, conn, transaction)
                             cmd.Parameters.AddWithValue("@newCounterId", targetCounterId)
                             cmd.Parameters.AddWithValue("@queueId", queueId)
