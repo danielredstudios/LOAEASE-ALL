@@ -587,8 +587,8 @@ Partial Class frmKiosk
         pnlHeader.Dock = DockStyle.Top
         pnlHeader.Location = New Point(0, 0)
         pnlHeader.Name = "pnlHeader"
-        pnlHeader.Padding = New Padding(40, 20, 40, 20)
-        pnlHeader.Size = New Size(1920, 120)
+        pnlHeader.Padding = New Padding(40, 5, 40, 5)
+        pnlHeader.Size = New Size(1920, 60)
         pnlHeader.TabIndex = 2
         ' 
         ' lblAppName

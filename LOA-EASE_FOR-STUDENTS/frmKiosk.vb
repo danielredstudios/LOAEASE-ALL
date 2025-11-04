@@ -162,13 +162,13 @@ Public Class frmKiosk
         Dim screenWidth As Integer = tpMain.ClientSize.Width
         Dim screenHeight As Integer = tpMain.ClientSize.Height
         
-        Dim panelWidth As Integer = 1150
+        Dim panelWidth As Integer = 1280
         Dim panelHeight As Integer = 880
         
         If screenWidth < panelWidth + 100 Then panelWidth = screenWidth - 100
         If screenHeight < panelHeight + 100 Then panelHeight = screenHeight - 100
         
-        If panelWidth < 1000 Then panelWidth = Math.Max(1000, screenWidth - 100)
+        If panelWidth < 1100 Then panelWidth = Math.Max(1100, screenWidth - 100)
         If panelHeight < 800 Then panelHeight = Math.Max(800, screenHeight - 100)
         
         pnlMainInput.SuspendLayout()
