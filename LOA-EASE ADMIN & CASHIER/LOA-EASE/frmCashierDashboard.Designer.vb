@@ -42,6 +42,7 @@ Partial Class frmCashierDashboard
         lblStudentNumber = New Label()
         lblName = New Label()
         lblServingNumber = New Label()
+        lblServingTime = New Label()
         lblNowServingTitle = New Label()
         pnlWaitingList = New Panel()
         dgvWaitingList = New DataGridView()
@@ -49,6 +50,7 @@ Partial Class frmCashierDashboard
         btnCallNext = New Button()
         lblWaitingListTitle = New Label()
         tmrQueueRefresh = New Timer(components)
+        tmrServingTime = New Timer(components)
         pnlHeader.SuspendLayout()
         pnlNowServing.SuspendLayout()
         pnlServingDetails.SuspendLayout()
@@ -143,6 +145,7 @@ Partial Class frmCashierDashboard
         ' 
         pnlNowServing.BackColor = Color.FromArgb(CByte(0), CByte(51), CByte(102))
         pnlNowServing.Controls.Add(pnlServingDetails)
+        pnlNowServing.Controls.Add(lblServingTime)
         pnlNowServing.Controls.Add(lblServingNumber)
         pnlNowServing.Controls.Add(lblNowServingTitle)
         pnlNowServing.Location = New Point(30, 107)
@@ -260,6 +263,18 @@ Partial Class frmCashierDashboard
         lblServingNumber.Text = "---"
         lblServingNumber.TextAlign = ContentAlignment.MiddleCenter
         ' 
+        ' lblServingTime
+        ' 
+        lblServingTime.Font = New Font("Poppins", 12.0F, FontStyle.Bold)
+        lblServingTime.ForeColor = Color.FromArgb(CByte(255), CByte(193), CByte(7))
+        lblServingTime.Location = New Point(0, 200)
+        lblServingTime.Name = "lblServingTime"
+        lblServingTime.Size = New Size(400, 30)
+        lblServingTime.TabIndex = 3
+        lblServingTime.Text = "Serving Time: --:--"
+        lblServingTime.TextAlign = ContentAlignment.MiddleCenter
+        lblServingTime.Visible = False
+        ' 
         ' lblNowServingTitle
         ' 
         lblNowServingTitle.Dock = DockStyle.Top
@@ -366,6 +381,10 @@ Partial Class frmCashierDashboard
         ' 
         tmrQueueRefresh.Interval = 5000
         ' 
+        ' tmrServingTime
+        ' 
+        tmrServingTime.Interval = 1000
+        ' 
         ' frmCashierDashboard
         ' 
         AutoScaleDimensions = New SizeF(7.0F, 15.0F)
@@ -400,6 +419,7 @@ Partial Class frmCashierDashboard
     Friend WithEvents pnlNowServing As Panel
     Friend WithEvents lblNowServingTitle As Label
     Friend WithEvents lblServingNumber As Label
+    Friend WithEvents lblServingTime As Label
     Friend WithEvents pnlServingDetails As Panel
     Friend WithEvents lblName As Label
     Friend WithEvents lblStudentNumber As Label
@@ -413,5 +433,6 @@ Partial Class frmCashierDashboard
     Friend WithEvents lblWaitingListTitle As Label
     Friend WithEvents btnCallNext As Button
     Friend WithEvents tmrQueueRefresh As Timer
+    Friend WithEvents tmrServingTime As Timer
     Friend WithEvents btnRecall As Button
 End Class

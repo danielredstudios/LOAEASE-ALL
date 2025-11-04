@@ -28,6 +28,8 @@ Public Class frmAdminDashboard
         lblWelcome.Text = $"Welcome, {_adminFullName}"
 
         SetupDataGridViews()
+        SetupKPIPanel()
+        MakeDashboardResponsive()
 
         RefreshAllData()
 
@@ -498,6 +500,7 @@ Public Class frmAdminDashboard
         dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "QueueNumber", .HeaderText = "Queue No.", .DataPropertyName = "Queue Number"})
         dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "FullName", .HeaderText = "Full Name", .DataPropertyName = "Full Name"})
         dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "Status", .HeaderText = "Status", .DataPropertyName = "Status"})
+        dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "ServingDuration", .HeaderText = "Serving Duration", .DataPropertyName = "Serving Duration"})
         dgvQueueLogs.Columns.Add(New DataGridViewTextBoxColumn With {.Name = "CreatedAt", .HeaderText = "Date Created", .DataPropertyName = "Date Created"})
         dgvQueueLogs.SelectionMode = DataGridViewSelectionMode.FullRowSelect
         dgvQueueLogs.DefaultCellStyle.SelectionBackColor = Color.FromArgb(0, 85, 164)
@@ -538,9 +541,290 @@ Public Class frmAdminDashboard
         dgvReports.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
     End Sub
 
+    Private Sub SetupKPIPanel()
+        Dim pnlKPI As New Panel() With {
+            .Name = "pnlKPI",
+            .Dock = DockStyle.Top,
+            .AutoSize = True,
+            .MinimumSize = New Size(0, 140),
+            .BackColor = Color.FromArgb(248, 249, 250),
+            .Padding = New Padding(15, 15, 15, 15)
+        }
+
+        Dim pnlKPIHeader As New Panel() With {
+            .Dock = DockStyle.Top,
+            .Height = 40,
+            .BackColor = Color.Transparent
+        }
+        
+        Dim lblKPITitle As New Label() With {
+            .Text = "Today's Key Performance Indicators",
+            .Font = New Font("Poppins", 11.0F, FontStyle.Bold),
+            .ForeColor = Color.FromArgb(33, 37, 41),
+            .AutoSize = True,
+            .Location = New Point(5, 8)
+        }
+        pnlKPIHeader.Controls.Add(lblKPITitle)
+        pnlKPI.Controls.Add(pnlKPIHeader)
+
+        Dim tlpKPI As New TableLayoutPanel() With {
+            .Name = "tlpKPI",
+            .Dock = DockStyle.Top,
+            .AutoSize = True,
+            .ColumnCount = 6,
+            .RowCount = 1,
+            .Padding = New Padding(0, 5, 0, 5),
+            .BackColor = Color.Transparent
+        }
+
+        For i As Integer = 0 To 5
+            tlpKPI.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 16.66F))
+        Next
+        tlpKPI.RowStyles.Add(New RowStyle(SizeType.AutoSize))
+
+        Dim CreateKPICard = Function(title As String, lblName As String, color As Color, icon As String) As Panel
+            Dim card As New Panel() With {
+                .MinimumSize = New Size(140, 90),
+                .Dock = DockStyle.Fill,
+                .BackColor = Color.White,
+                .Margin = New Padding(5, 5, 5, 5),
+                .Padding = New Padding(12, 12, 12, 12)
+            }
+            
+            AddHandler card.Paint, Sub(sender, e)
+                Dim rect As Rectangle = card.ClientRectangle
+                rect.Width -= 1
+                rect.Height -= 1
+                Using pen As New Pen(Color.FromArgb(222, 226, 230), 1)
+                    e.Graphics.DrawRectangle(pen, rect)
+                End Using
+            End Sub
+            
+            Dim pnlColorBar As New Panel() With {
+                .Size = New Size(4, 25),
+                .BackColor = color,
+                .Location = New Point(8, 12)
+            }
+            card.Controls.Add(pnlColorBar)
+            
+            Dim lblCardTitle As New Label() With {
+                .Text = title.ToUpper(),
+                .Font = New Font("Poppins", 7.5F, FontStyle.Bold),
+                .ForeColor = Color.FromArgb(108, 117, 125),
+                .AutoSize = True,
+                .Location = New Point(18, 12)
+            }
+            card.Controls.Add(lblCardTitle)
+            
+            Dim lblValue As New Label() With {
+                .Name = lblName,
+                .Text = "0",
+                .Font = New Font("Poppins", 24.0F, FontStyle.Bold),
+                .ForeColor = color,
+                .AutoSize = True,
+                .Location = New Point(18, 35)
+            }
+            card.Controls.Add(lblValue)
+            
+            Dim lblIcon As New Label() With {
+                .Text = icon,
+                .Font = New Font("Segoe UI Symbol", 16.0F),
+                .ForeColor = Color.FromArgb(230, 230, 230),
+                .AutoSize = True
+            }
+            lblIcon.Location = New Point(card.Width - lblIcon.Width - 15, 12)
+            card.Controls.Add(lblIcon)
+            
+            Return card
+        End Function
+
+        tlpKPI.Controls.Add(CreateKPICard("Total Today", "lblKPITotalToday", Color.FromArgb(0, 123, 255), "📊"), 0, 0)
+        tlpKPI.Controls.Add(CreateKPICard("Completed", "lblKPICompleted", Color.FromArgb(40, 167, 69), "✓"), 1, 0)
+        tlpKPI.Controls.Add(CreateKPICard("Serving", "lblKPIServing", Color.FromArgb(23, 162, 184), "👥"), 2, 0)
+        tlpKPI.Controls.Add(CreateKPICard("Waiting", "lblKPIWaiting", Color.FromArgb(255, 193, 7), "⏳"), 3, 0)
+        tlpKPI.Controls.Add(CreateKPICard("No-Show", "lblKPINoShow", Color.FromArgb(220, 53, 69), "✗"), 4, 0)
+        tlpKPI.Controls.Add(CreateKPICard("Avg Time", "lblKPIAvgTime", Color.FromArgb(108, 117, 125), "⏱"), 5, 0)
+
+        pnlKPI.Controls.Add(tlpKPI)
+        
+        AddHandler pnlDashboard.Resize, Sub()
+            If tlpKPI IsNot Nothing Then
+                Dim dashboardWidth As Integer = pnlDashboard.Width
+                If dashboardWidth < 1200 Then
+                    tlpKPI.ColumnCount = 3
+                    tlpKPI.RowCount = 2
+                    tlpKPI.ColumnStyles.Clear()
+                    For i As Integer = 0 To 2
+                        tlpKPI.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 33.33F))
+                    Next
+                ElseIf dashboardWidth < 900 Then
+                    tlpKPI.ColumnCount = 2
+                    tlpKPI.RowCount = 3
+                    tlpKPI.ColumnStyles.Clear()
+                    For i As Integer = 0 To 1
+                        tlpKPI.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 50.0F))
+                    Next
+                Else
+                    tlpKPI.ColumnCount = 6
+                    tlpKPI.RowCount = 1
+                    tlpKPI.ColumnStyles.Clear()
+                    For i As Integer = 0 To 5
+                        tlpKPI.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 16.66F))
+                    Next
+                End If
+            End If
+        End Sub
+        
+        pnlDashboard.Controls.Add(pnlKPI)
+        pnlKPI.BringToFront()
+    End Sub
+
+    Private Sub MakeDashboardResponsive()
+        pnlCashiersPanel.Location = New Point(0, 0)
+        pnlCashiersPanel.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left
+        pnlCashiersPanel.Width = 420
+        pnlCashiersPanel.Padding = New Padding(0, 0, 7, 0)
+        pnlCashiersPanel.BorderStyle = BorderStyle.FixedSingle
+        
+        pnlQueues.Location = New Point(435, 0)
+        pnlQueues.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        pnlQueues.Padding = New Padding(8, 0, 0, 0)
+        pnlQueues.BorderStyle = BorderStyle.FixedSingle
+        
+        AddHandler pnlCashiersPanel.Paint, Sub(sender, e)
+            Dim rect As Rectangle = pnlCashiersPanel.ClientRectangle
+            rect.Width -= 1
+            rect.Height -= 1
+            Using pen As New Pen(Color.FromArgb(222, 226, 230), 1)
+                e.Graphics.DrawRectangle(pen, rect)
+            End Using
+        End Sub
+        
+        AddHandler pnlQueues.Paint, Sub(sender, e)
+            Dim rect As Rectangle = pnlQueues.ClientRectangle
+            rect.Width -= 1
+            rect.Height -= 1
+            Using pen As New Pen(Color.FromArgb(222, 226, 230), 1)
+                e.Graphics.DrawRectangle(pen, rect)
+            End Using
+        End Sub
+        
+        Dim resizeHandler As Action = Sub()
+            If pnlCashiersPanel IsNot Nothing AndAlso pnlQueues IsNot Nothing Then
+                Dim availableWidth As Integer = pnlDashboard.Width
+                Dim kpiHeight As Integer = 0
+                
+                Dim kpiPanel = pnlDashboard.Controls.OfType(Of Panel)().FirstOrDefault(Function(p) p.Name = "pnlKPI")
+                If kpiPanel IsNot Nothing Then
+                    kpiHeight = kpiPanel.Height + 15
+                End If
+                
+                If availableWidth < 900 Then
+                    pnlCashiersPanel.Visible = True
+                    pnlQueues.Visible = True
+                    pnlCashiersPanel.Dock = DockStyle.None
+                    pnlQueues.Dock = DockStyle.None
+                    pnlCashiersPanel.Width = availableWidth
+                    pnlCashiersPanel.Height = CInt((pnlDashboard.Height - kpiHeight) * 0.35)
+                    pnlCashiersPanel.Location = New Point(0, kpiHeight)
+                    pnlCashiersPanel.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+                    
+                    Dim queuesY As Integer = kpiHeight + pnlCashiersPanel.Height + 15
+                    pnlQueues.Location = New Point(0, queuesY)
+                    pnlQueues.Width = availableWidth
+                    pnlQueues.Height = pnlDashboard.Height - queuesY
+                    pnlQueues.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+                Else
+                    pnlCashiersPanel.Visible = True
+                    pnlQueues.Visible = True
+                    pnlCashiersPanel.Dock = DockStyle.None
+                    pnlQueues.Dock = DockStyle.None
+                    
+                    Dim cashierWidth As Integer = Math.Max(380, CInt(availableWidth * 0.4))
+                    If cashierWidth > 500 Then cashierWidth = 500
+                    
+                    pnlCashiersPanel.Width = cashierWidth
+                    pnlCashiersPanel.Height = pnlDashboard.Height - kpiHeight
+                    pnlCashiersPanel.Location = New Point(0, kpiHeight)
+                    pnlCashiersPanel.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left
+                    
+                    pnlQueues.Location = New Point(cashierWidth + 15, kpiHeight)
+                    pnlQueues.Width = availableWidth - cashierWidth - 15
+                    pnlQueues.Height = pnlDashboard.Height - kpiHeight
+                    pnlQueues.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+                End If
+            End If
+        End Sub
+        
+        AddHandler pnlDashboard.Resize, Sub()
+            resizeHandler()
+        End Sub
+        
+        resizeHandler()
+    End Sub
+
     Private Sub RefreshAllData()
         FetchCashierStatus()
         FetchAllQueues()
+        FetchDashboardKPIs()
+    End Sub
+
+    Private Sub FetchDashboardKPIs()
+        Using conn As MySqlConnection = DatabaseHelper.GetConnection()
+            Try
+                conn.Open()
+                Dim query As String = "
+                    SELECT 
+                        COUNT(*) AS TotalToday,
+                        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS Completed,
+                        SUM(CASE WHEN status = 'serving' THEN 1 ELSE 0 END) AS Serving,
+                        SUM(CASE WHEN status = 'waiting' THEN 1 ELSE 0 END) AS Waiting,
+                        SUM(CASE WHEN status = 'no-show' THEN 1 ELSE 0 END) AS NoShow,
+                        IFNULL(AVG(CASE 
+                            WHEN status IN ('completed', 'no-show') AND called_at IS NOT NULL AND completed_at IS NOT NULL 
+                            THEN TIMESTAMPDIFF(SECOND, called_at, completed_at) 
+                        END), 0) AS AvgServingTimeSec
+                    FROM queues 
+                    WHERE DATE(created_at) = CURDATE()"
+                Using cmd As New MySqlCommand(query, conn)
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        If reader.Read() Then
+                            Dim totalToday As Integer = Convert.ToInt32(reader("TotalToday"))
+                            Dim completed As Integer = Convert.ToInt32(reader("Completed"))
+                            Dim serving As Integer = Convert.ToInt32(reader("Serving"))
+                            Dim waiting As Integer = Convert.ToInt32(reader("Waiting"))
+                            Dim noShow As Integer = Convert.ToInt32(reader("NoShow"))
+                            Dim avgServingTimeSec As Double = Convert.ToDouble(reader("AvgServingTimeSec"))
+                            
+                            ' Update KPI labels if they exist
+                            UpdateKPILabels(totalToday, completed, serving, waiting, noShow, avgServingTimeSec)
+                        End If
+                    End Using
+                End Using
+            Catch ex As Exception
+                HandleDbError("fetching dashboard KPIs", ex)
+            End Try
+        End Using
+    End Sub
+
+    Private Sub UpdateKPILabels(totalToday As Integer, completed As Integer, serving As Integer, waiting As Integer, noShow As Integer, avgServingTimeSec As Double)
+        Dim lblTotalToday = TryCast(pnlDashboard.Controls.Find("lblKPITotalToday", True).FirstOrDefault(), Label)
+        Dim lblCompleted = TryCast(pnlDashboard.Controls.Find("lblKPICompleted", True).FirstOrDefault(), Label)
+        Dim lblServing = TryCast(pnlDashboard.Controls.Find("lblKPIServing", True).FirstOrDefault(), Label)
+        Dim lblWaiting = TryCast(pnlDashboard.Controls.Find("lblKPIWaiting", True).FirstOrDefault(), Label)
+        Dim lblNoShow = TryCast(pnlDashboard.Controls.Find("lblKPINoShow", True).FirstOrDefault(), Label)
+        Dim lblAvgTime = TryCast(pnlDashboard.Controls.Find("lblKPIAvgTime", True).FirstOrDefault(), Label)
+
+        If lblTotalToday IsNot Nothing Then lblTotalToday.Text = totalToday.ToString()
+        If lblCompleted IsNot Nothing Then lblCompleted.Text = completed.ToString()
+        If lblServing IsNot Nothing Then lblServing.Text = serving.ToString()
+        If lblWaiting IsNot Nothing Then lblWaiting.Text = waiting.ToString()
+        If lblNoShow IsNot Nothing Then lblNoShow.Text = noShow.ToString()
+        If lblAvgTime IsNot Nothing Then 
+            Dim minutes As Integer = CInt(Math.Floor(avgServingTimeSec / 60))
+            Dim seconds As Integer = CInt(avgServingTimeSec Mod 60)
+            lblAvgTime.Text = $"{minutes}m {seconds}s"
+        End If
     End Sub
 
     Private Sub FetchCashierStatus()
@@ -629,7 +913,20 @@ Public Class frmAdminDashboard
                         ELSE CONCAT(s.first_name, ' ', s.last_name)
                     END AS 'Full Name',
                     q.status AS 'Status',
-                    q.created_at AS 'Date Created'
+                    q.created_at AS 'Date Created',
+                    CASE
+                        WHEN q.status IN ('completed', 'no-show') AND q.called_at IS NOT NULL AND q.completed_at IS NOT NULL THEN
+                            CONCAT(
+                                FLOOR(TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at) / 60), 'm ',
+                                MOD(TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at), 60), 's'
+                            )
+                        WHEN q.status = 'serving' AND q.called_at IS NOT NULL THEN
+                            CONCAT(
+                                FLOOR(TIMESTAMPDIFF(SECOND, q.called_at, NOW()) / 60), 'm ',
+                                MOD(TIMESTAMPDIFF(SECOND, q.called_at, NOW()), 60), 's'
+                            )
+                        ELSE 'N/A'
+                    END AS 'Serving Duration'
                 FROM queues q
                 LEFT JOIN students s ON q.student_id = s.student_id
                 LEFT JOIN visitors v ON q.visitor_id = v.visitor_id
@@ -1374,7 +1671,15 @@ Public Class frmAdminDashboard
                                ELSE CONCAT(s.first_name, ' ', s.last_name)
                            END AS FullName,
                            q.status, q.created_at,
-                           c.full_name AS CashierName
+                           c.full_name AS CashierName,
+                           CASE
+                               WHEN q.status IN ('completed', 'no-show') AND q.called_at IS NOT NULL AND q.completed_at IS NOT NULL THEN
+                                   CONCAT(
+                                       FLOOR(TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at) / 60), 'm ',
+                                       MOD(TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at), 60), 's'
+                                   )
+                               ELSE 'N/A'
+                           END AS ServingDuration
                     FROM queues q
                     LEFT JOIN students s ON q.student_id = s.student_id
                     LEFT JOIN visitors v ON q.visitor_id = v.visitor_id
@@ -1416,7 +1721,8 @@ Public Class frmAdminDashboard
                             .FullName = reader("FullName").ToString(),
                             .Status = reader("status").ToString(),
                             .CreatedAt = Convert.ToDateTime(reader("created_at")).ToString("g"),
-                            .CashierName = If(reader.IsDBNull(reader.GetOrdinal("CashierName")), "N/A", reader("CashierName").ToString())
+                            .CashierName = If(reader.IsDBNull(reader.GetOrdinal("CashierName")), "N/A", reader("CashierName").ToString()),
+                            .ServingDuration = reader("ServingDuration").ToString()
                         })
                     End While
                 End Using
@@ -1426,6 +1732,74 @@ Public Class frmAdminDashboard
                 dgvReports.ClearSelection()
             Catch ex As Exception
                 HandleDbError("fetching report data", ex)
+            End Try
+        End Using
+    End Sub
+
+    Private Sub btnGenerateCashierPerf_Click(sender As Object, e As EventArgs) Handles btnGenerateCashierPerf.Click
+        FetchCashierPerformanceData()
+    End Sub
+
+    Private Sub FetchCashierPerformanceData()
+        Dim selectedDate As Date = dtpCashierPerfDate.Value.Date
+        Dim performanceData As New BindingList(Of CashierPerformanceItem)()
+
+        Using conn As MySqlConnection = DatabaseHelper.GetConnection()
+            Try
+                conn.Open()
+                Dim query As String = "
+                    SELECT 
+                        c.full_name AS CashierName,
+                        co.counter_name AS Counter,
+                        COUNT(q.queue_id) AS TicketsServed,
+                        SUM(CASE WHEN q.status = 'completed' THEN 1 ELSE 0 END) AS Completed,
+                        SUM(CASE WHEN q.status = 'no-show' THEN 1 ELSE 0 END) AS NoShow,
+                        IFNULL(AVG(CASE 
+                            WHEN q.status IN ('completed', 'no-show') AND q.called_at IS NOT NULL AND q.completed_at IS NOT NULL 
+                            THEN TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at) 
+                        END), 0) AS AvgServingTimeSec,
+                        IFNULL(SUM(CASE 
+                            WHEN q.status IN ('completed', 'no-show') AND q.called_at IS NOT NULL AND q.completed_at IS NOT NULL 
+                            THEN TIMESTAMPDIFF(SECOND, q.called_at, q.completed_at) 
+                        END), 0) AS TotalServingTimeSec
+                    FROM cashiers c
+                    JOIN counters co ON c.counter_id = co.counter_id
+                    LEFT JOIN queues q ON c.counter_id = q.counter_id 
+                        AND DATE(q.created_at) = @selectedDate
+                        AND q.status IN ('completed', 'no-show')
+                    WHERE c.is_active = 1
+                    GROUP BY c.cashier_id, c.full_name, co.counter_name
+                    ORDER BY TicketsServed DESC"
+                
+                Using cmd As New MySqlCommand(query, conn)
+                    cmd.Parameters.AddWithValue("@selectedDate", selectedDate)
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim avgSec As Double = Convert.ToDouble(reader("AvgServingTimeSec"))
+                            Dim totalSec As Integer = Convert.ToInt32(reader("TotalServingTimeSec"))
+                            
+                            Dim avgMin As Integer = CInt(Math.Floor(avgSec / 60))
+                            Dim avgSecRem As Integer = CInt(avgSec Mod 60)
+                            Dim totalMin As Integer = CInt(Math.Floor(totalSec / 60.0))
+                            Dim totalSecRem As Integer = totalSec Mod 60
+                            
+                            performanceData.Add(New CashierPerformanceItem With {
+                                .CashierName = reader("CashierName").ToString(),
+                                .Counter = reader("Counter").ToString(),
+                                .TicketsServed = Convert.ToInt32(reader("TicketsServed")),
+                                .Completed = Convert.ToInt32(reader("Completed")),
+                                .NoShow = Convert.ToInt32(reader("NoShow")),
+                                .AvgServingTime = $"{avgMin}m {avgSecRem}s",
+                                .TotalServingTime = $"{totalMin}m {totalSecRem}s"
+                            })
+                        End While
+                    End Using
+                End Using
+
+                dgvCashierPerformance.DataSource = performanceData
+                dgvCashierPerformance.ClearSelection()
+            Catch ex As Exception
+                HandleDbError("fetching cashier performance data", ex)
             End Try
         End Using
     End Sub
@@ -1654,6 +2028,16 @@ Private Sub dgvAllQueues_CellFormatting(sender As Object, e As DataGridViewCellF
     End Sub
 End Class
 
+Public Class CashierPerformanceItem
+    Public Property CashierName As String
+    Public Property Counter As String
+    Public Property TicketsServed As Integer
+    Public Property Completed As Integer
+    Public Property NoShow As Integer
+    Public Property AvgServingTime As String
+    Public Property TotalServingTime As String
+End Class
+
 Public Class CashierStatusItem
     Public Property CashierName As String
     Public Property Status As String
@@ -1675,6 +2059,7 @@ Public Class QueueLogAdminItem
     Public Property Status As String
     Public Property CreatedAt As String
     Public Property CashierName As String
+    Public Property ServingDuration As String
 End Class
 
 Public Class User
