@@ -31,9 +31,6 @@ Public Class frmKiosk
 
     Private Const DWMWA_USE_IMMERSIVE_DARK_MODE As Integer = 20
 
-    Private _baseFonts As New Dictionary(Of String, Single)
-    Private _isResponsiveInitialized As Boolean = False
-
     Private Sub frmKiosk_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         btnGetTicket.Enabled = False
         btnCheckIn.Enabled = False
@@ -156,123 +153,51 @@ Public Class frmKiosk
     End Sub
 
     Private Sub InitializeResponsive()
-        If Not _isResponsiveInitialized Then
-            StoreBaseFonts(pnlMainInput)
-            StoreBaseFonts(pnlHeader)
-            StoreBaseFonts(pnlTicketCard)
-            _isResponsiveInitialized = True
-        End If
         ApplyResponsiveLayout()
-    End Sub
-
-    Private Sub StoreBaseFonts(parent As Control)
-        If parent Is Nothing Then Return
-        
-        For Each ctrl As Control In parent.Controls
-            If TypeOf ctrl Is Label OrElse TypeOf ctrl Is Button OrElse TypeOf ctrl Is CheckBox OrElse TypeOf ctrl Is GroupBox OrElse TypeOf ctrl Is TextBox Then
-                If Not _baseFonts.ContainsKey(ctrl.Name) Then
-                    _baseFonts(ctrl.Name) = ctrl.Font.Size
-                End If
-            End If
-            
-            If ctrl.HasChildren Then
-                StoreBaseFonts(ctrl)
-            End If
-        Next
     End Sub
 
     Private Sub ApplyResponsiveLayout()
         If tpMain Is Nothing OrElse pnlMainInput Is Nothing Then Return
-        If Not _isResponsiveInitialized Then Return
         
         Dim screenWidth As Integer = tpMain.ClientSize.Width
         Dim screenHeight As Integer = tpMain.ClientSize.Height
         
-        Dim baseWidth As Integer = 1920
-        Dim baseHeight As Integer = 941
+        Dim panelWidth As Integer = 1150
+        Dim panelHeight As Integer = 880
         
-        Dim scaleX As Double = screenWidth / CDbl(baseWidth)
-        Dim scaleY As Double = screenHeight / CDbl(baseHeight)
-        Dim scale As Double = Math.Min(scaleX, scaleY)
+        If screenWidth < panelWidth + 100 Then panelWidth = screenWidth - 100
+        If screenHeight < panelHeight + 100 Then panelHeight = screenHeight - 100
         
-        If scale < 0.7 Then scale = 0.7
-        If scale > 1.0 Then scale = 1.0
-        
-        Dim margins As Integer = 40
-        If screenWidth < 1400 Then margins = 30
-        
-        Dim panelWidth As Integer = CInt(1100 * scale)
-        Dim panelHeight As Integer = CInt(820 * scale)
-        
-        If panelWidth > screenWidth - margins Then panelWidth = screenWidth - margins
-        If panelHeight > screenHeight - margins Then panelHeight = screenHeight - margins
-        
-        If panelWidth < 950 Then panelWidth = Math.Min(950, screenWidth - margins)
-        If panelHeight < 750 Then panelHeight = Math.Min(750, screenHeight - margins)
+        If panelWidth < 1000 Then panelWidth = Math.Max(1000, screenWidth - 100)
+        If panelHeight < 800 Then panelHeight = Math.Max(800, screenHeight - 100)
         
         pnlMainInput.SuspendLayout()
         pnlMainInput.Size = New Size(panelWidth, panelHeight)
         pnlMainInput.Location = New Point((screenWidth - panelWidth) \ 2, (screenHeight - panelHeight) \ 2)
         
-        ScaleButtonPositions(scale, panelWidth, panelHeight)
+        PositionButtons(panelWidth, panelHeight)
         
         If pnlTicketResult IsNot Nothing Then
-            Dim ticketWidth As Integer = Math.Min(CInt(900 * scale), screenWidth - 40)
-            Dim ticketHeight As Integer = Math.Min(CInt(650 * scale), screenHeight - 40)
-            If ticketWidth < 600 Then ticketWidth = 600
-            If ticketHeight < 450 Then ticketHeight = 450
+            Dim ticketWidth As Integer = Math.Min(950, screenWidth - 80)
+            Dim ticketHeight As Integer = Math.Min(700, screenHeight - 80)
             pnlTicketResult.Size = New Size(ticketWidth, ticketHeight)
             If tpTicket IsNot Nothing Then
                 pnlTicketResult.Location = New Point((tpTicket.ClientSize.Width - ticketWidth) \ 2, (tpTicket.ClientSize.Height - ticketHeight) \ 2)
             End If
         End If
         
-        UpdateFontsWithScale(pnlMainInput, scale)
-        UpdateFontsWithScale(pnlHeader, scale)
-        UpdateFontsWithScale(pnlTicketCard, scale)
         pnlMainInput.ResumeLayout()
     End Sub
 
-    Private Sub UpdateFontsWithScale(parent As Control, scale As Double)
-        If parent Is Nothing Then Return
-        
-        For Each ctrl As Control In parent.Controls
-            If TypeOf ctrl Is Label OrElse TypeOf ctrl Is Button OrElse TypeOf ctrl Is CheckBox OrElse TypeOf ctrl Is GroupBox OrElse TypeOf ctrl Is TextBox Then
-                Dim baseFontSize As Single = 12.0F
-                
-                If _baseFonts.ContainsKey(ctrl.Name) Then
-                    baseFontSize = _baseFonts(ctrl.Name)
-                Else
-                    baseFontSize = ctrl.Font.Size
-                End If
-                
-                Dim newSize As Single = CSng(baseFontSize * scale)
-                If newSize < 9.0F Then newSize = 9.0F
-                If newSize > baseFontSize * 1.2F Then newSize = CSng(baseFontSize * 1.2F)
-                
-                Try
-                    If Math.Abs(ctrl.Font.Size - newSize) > 0.5F Then
-                        ctrl.Font = New Font(ctrl.Font.FontFamily, newSize, ctrl.Font.Style, ctrl.Font.Unit)
-                    End If
-                Catch
-                End Try
-            End If
-            
-            If ctrl.HasChildren Then
-                UpdateFontsWithScale(ctrl, scale)
-            End If
-        Next
-    End Sub
-
-    Private Sub ScaleButtonPositions(scale As Double, panelWidth As Integer, panelHeight As Integer)
-        Dim margin As Integer = 30
-        Dim buttonHeight As Integer = 60
-        Dim bottomMargin As Integer = 30
-        Dim buttonSpacing As Integer = 20
+    Private Sub PositionButtons(panelWidth As Integer, panelHeight As Integer)
+        Dim margin As Integer = 35
+        Dim buttonHeight As Integer = 65
+        Dim bottomMargin As Integer = 35
+        Dim buttonSpacing As Integer = 25
         
         If btnNewVisitor IsNot Nothing Then
-            Dim btnWidth As Integer = 150
-            Dim btnHeight As Integer = 45
+            Dim btnWidth As Integer = 160
+            Dim btnHeight As Integer = 50
             btnNewVisitor.Size = New Size(btnWidth, btnHeight)
             btnNewVisitor.Location = New Point(panelWidth - btnWidth - margin, margin)
         End If
@@ -280,7 +205,6 @@ Public Class frmKiosk
         If btnCheckIn IsNot Nothing AndAlso btnCheckIn.Visible Then
             Dim totalBottomWidth As Integer = panelWidth - (2 * margin)
             Dim singleButtonWidth As Integer = (totalBottomWidth - buttonSpacing) \ 2
-            If singleButtonWidth < 200 Then singleButtonWidth = 200
             
             btnCheckIn.Size = New Size(singleButtonWidth, buttonHeight)
             btnCheckIn.Location = New Point(margin, panelHeight - buttonHeight - bottomMargin)
@@ -294,7 +218,6 @@ Public Class frmKiosk
                 leftOffset = btnCheckIn.Right + buttonSpacing
                 Dim totalBottomWidth As Integer = panelWidth - (2 * margin)
                 btnWidth = (totalBottomWidth - buttonSpacing) \ 2
-                If btnWidth < 200 Then btnWidth = 200
             Else
                 btnWidth = panelWidth - (2 * margin)
             End If
