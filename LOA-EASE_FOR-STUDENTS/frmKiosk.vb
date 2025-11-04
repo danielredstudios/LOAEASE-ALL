@@ -204,8 +204,11 @@ Public Class frmKiosk
         If panelWidth < 700 Then panelWidth = 700
         If panelHeight < 550 Then panelHeight = 550
         
+        pnlMainInput.SuspendLayout()
         pnlMainInput.Size = New Size(panelWidth, panelHeight)
         pnlMainInput.Location = New Point((screenWidth - panelWidth) \ 2, (screenHeight - panelHeight) \ 2)
+        
+        ScaleButtonPositions(scale, panelWidth, panelHeight)
         
         If pnlTicketResult IsNot Nothing Then
             Dim ticketWidth As Integer = Math.Min(CInt(900 * scale), screenWidth - 40)
@@ -221,6 +224,7 @@ Public Class frmKiosk
         UpdateFontsWithScale(pnlMainInput, scale)
         UpdateFontsWithScale(pnlHeader, scale)
         UpdateFontsWithScale(pnlTicketCard, scale)
+        pnlMainInput.ResumeLayout()
     End Sub
 
     Private Sub UpdateFontsWithScale(parent As Control, scale As Double)
@@ -252,6 +256,40 @@ Public Class frmKiosk
                 UpdateFontsWithScale(ctrl, scale)
             End If
         Next
+    End Sub
+
+    Private Sub ScaleButtonPositions(scale As Double, panelWidth As Integer, panelHeight As Integer)
+        Dim margin As Integer = Math.Max(CInt(40 * scale), 20)
+        Dim buttonHeight As Integer = Math.Max(CInt(60 * scale), 50)
+        Dim bottomMargin As Integer = Math.Max(CInt(30 * scale), 20)
+        Dim buttonSpacing As Integer = Math.Max(CInt(20 * scale), 10)
+        
+        If btnNewVisitor IsNot Nothing Then
+            Dim btnWidth As Integer = Math.Max(CInt(150 * scale), 120)
+            Dim btnHeight As Integer = Math.Max(CInt(40 * scale), 35)
+            btnNewVisitor.Size = New Size(btnWidth, btnHeight)
+            btnNewVisitor.Location = New Point(panelWidth - btnWidth - margin, margin)
+        End If
+        
+        If btnCheckIn IsNot Nothing AndAlso btnCheckIn.Visible Then
+            Dim btnWidth As Integer = Math.Min(CInt(450 * scale), (panelWidth - (3 * margin)) \ 2)
+            btnCheckIn.Size = New Size(btnWidth, buttonHeight)
+            btnCheckIn.Location = New Point(margin, panelHeight - buttonHeight - bottomMargin)
+        End If
+        
+        If btnGetTicket IsNot Nothing Then
+            Dim leftOffset As Integer = margin
+            Dim availableWidth As Integer = panelWidth - (2 * margin)
+            
+            If btnCheckIn IsNot Nothing AndAlso btnCheckIn.Visible Then
+                leftOffset = btnCheckIn.Right + buttonSpacing
+                availableWidth = panelWidth - leftOffset - margin
+            End If
+            
+            Dim btnWidth As Integer = Math.Min(CInt(450 * scale), availableWidth)
+            btnGetTicket.Size = New Size(btnWidth, buttonHeight)
+            btnGetTicket.Location = New Point(leftOffset, panelHeight - buttonHeight - bottomMargin)
+        End If
     End Sub
 
     Private Sub MakeResponsive()
