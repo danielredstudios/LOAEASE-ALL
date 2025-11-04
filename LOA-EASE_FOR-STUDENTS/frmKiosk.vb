@@ -231,10 +231,6 @@ Public Class frmKiosk
         ApplyResponsiveLayout()
     End Sub
 
-    Private Sub ScaleFontsRecursive(parent As Control, scale As Double)
-        UpdateFontsWithScale(parent, scale)
-    End Sub
-
     Private Sub CenterPanel()
         pnlMainInput.Left = (tpMain.ClientSize.Width - pnlMainInput.Width) / 2
         pnlMainInput.Top = (tpMain.ClientSize.Height - pnlMainInput.Height) / 2
