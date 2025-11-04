@@ -51,7 +51,7 @@ Public Class frmKiosk
         SetRoundedCorners(lblInstructions, 5)
         
         LoadSoundFile()
-        CenterPanel()
+        MakeResponsive()
         tmrStudentSearch.Interval = 500
         
         pnlMainInput.Refresh()
@@ -149,7 +149,101 @@ Public Class frmKiosk
     End Sub
 
     Private Sub frmKiosk_Resize(sender As Object, e As EventArgs) Handles Me.Resize
+        MakeResponsive()
+    End Sub
+
+    Private Sub MakeResponsive()
+        If tpMain Is Nothing OrElse pnlMainInput Is Nothing Then Return
+        
+        Dim screenWidth As Integer = tpMain.ClientSize.Width
+        Dim screenHeight As Integer = tpMain.ClientSize.Height
+        
+        Dim basePanelWidth As Integer = 1000
+        Dim basePanelHeight As Integer = 750
+        Dim baseScreenWidth As Integer = 1920
+        Dim baseScreenHeight As Integer = 941
+        
+        Dim scaleX As Double = screenWidth / CDbl(baseScreenWidth)
+        Dim scaleY As Double = screenHeight / CDbl(baseScreenHeight)
+        Dim scale As Double = Math.Min(scaleX, scaleY)
+        
+        If scale < 0.5 Then scale = 0.5
+        If scale > 1.5 Then scale = 1.5
+        
+        Dim newPanelWidth As Integer = CInt(basePanelWidth * scale)
+        Dim newPanelHeight As Integer = CInt(basePanelHeight * scale)
+        
+        If newPanelWidth < 600 Then newPanelWidth = 600
+        If newPanelHeight < 500 Then newPanelHeight = 500
+        
+        If newPanelWidth > screenWidth - 40 Then newPanelWidth = screenWidth - 40
+        If newPanelHeight > screenHeight - 40 Then newPanelHeight = screenHeight - 40
+        
+        pnlMainInput.Size = New Size(newPanelWidth, newPanelHeight)
+        
+        Dim padding As Integer = CInt(40 * scale)
+        If padding < 20 Then padding = 20
+        pnlMainInput.Padding = New Padding(padding)
+        
         CenterPanel()
+        ScaleFontsRecursive(pnlMainInput, scale)
+        ScaleFontsRecursive(pnlHeader, scale)
+        ScaleFontsRecursive(pnlTicketCard, scale)
+        
+        If pnlTicketResult IsNot Nothing Then
+            Dim ticketWidth As Integer = CInt(900 * scale)
+            Dim ticketHeight As Integer = CInt(650 * scale)
+            If ticketWidth < 500 Then ticketWidth = 500
+            If ticketHeight < 400 Then ticketHeight = 400
+            If ticketWidth > screenWidth - 40 Then ticketWidth = screenWidth - 40
+            If ticketHeight > screenHeight - 40 Then ticketHeight = screenHeight - 40
+            pnlTicketResult.Size = New Size(ticketWidth, ticketHeight)
+        End If
+    End Sub
+
+    Private Sub ScaleFontsRecursive(parent As Control, scale As Double)
+        If parent Is Nothing Then Return
+        
+        For Each ctrl As Control In parent.Controls
+            If TypeOf ctrl Is Label OrElse TypeOf ctrl Is Button OrElse TypeOf ctrl Is CheckBox OrElse TypeOf ctrl Is GroupBox Then
+                Dim baseFont As Font = ctrl.Font
+                Dim baseFontSize As Single = baseFont.Size
+                
+                Select Case ctrl.Name
+                    Case "lblQueueNumber"
+                        baseFontSize = 56.0F
+                    Case "lblAssignedCounter", "lblAssignedCashier"
+                        baseFontSize = 24.0F
+                    Case "lblMessage"
+                        baseFontSize = 18.0F
+                    Case "lblSystemName"
+                        baseFontSize = 24.0F
+                    Case "lblAppName"
+                        baseFontSize = 14.0F
+                    Case "btnGetTicket"
+                        baseFontSize = 18.0F
+                    Case "btnNewVisitor", "btnCheckIn"
+                        baseFontSize = 10.0F
+                    Case "lblInstructions"
+                        baseFontSize = 11.0F
+                    Case Else
+                        baseFontSize = ctrl.Font.Size
+                End Select
+                
+                Dim newFontSize As Single = CSng(baseFontSize * scale)
+                If newFontSize < 8.0F Then newFontSize = 8.0F
+                If newFontSize > baseFontSize * 1.5F Then newFontSize = CSng(baseFontSize * 1.5F)
+                
+                Try
+                    ctrl.Font = New Font(baseFont.FontFamily, newFontSize, baseFont.Style, baseFont.Unit)
+                Catch
+                End Try
+            End If
+            
+            If ctrl.HasChildren Then
+                ScaleFontsRecursive(ctrl, scale)
+            End If
+        Next
     End Sub
 
     Private Sub CenterPanel()
