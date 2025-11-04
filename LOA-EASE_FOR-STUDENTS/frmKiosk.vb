@@ -195,14 +195,19 @@ Public Class frmKiosk
         Dim scaleY As Double = screenHeight / CDbl(baseHeight)
         Dim scale As Double = Math.Min(scaleX, scaleY)
         
-        If scale < 0.6 Then scale = 0.6
-        If scale > 1.2 Then scale = 1.2
+        If scale < 0.65 Then scale = 0.65
+        If scale > 1.15 Then scale = 1.15
         
-        Dim panelWidth As Integer = Math.Min(CInt(1000 * scale), screenWidth - 40)
-        Dim panelHeight As Integer = Math.Min(CInt(750 * scale), screenHeight - 40)
+        Dim panelWidth As Integer = Math.Min(CInt(1000 * scale), screenWidth - 60)
+        Dim panelHeight As Integer = Math.Min(CInt(750 * scale), screenHeight - 60)
         
-        If panelWidth < 700 Then panelWidth = 700
-        If panelHeight < 550 Then panelHeight = 550
+        If screenWidth < 1400 Then
+            panelWidth = Math.Max(panelWidth, Math.Min(900, screenWidth - 60))
+            panelHeight = Math.Max(panelHeight, Math.Min(700, screenHeight - 60))
+        Else
+            If panelWidth < 850 Then panelWidth = 850
+            If panelHeight < 650 Then panelHeight = 650
+        End If
         
         pnlMainInput.SuspendLayout()
         pnlMainInput.Size = New Size(panelWidth, panelHeight)
@@ -259,20 +264,23 @@ Public Class frmKiosk
     End Sub
 
     Private Sub ScaleButtonPositions(scale As Double, panelWidth As Integer, panelHeight As Integer)
-        Dim margin As Integer = Math.Max(CInt(40 * scale), 20)
-        Dim buttonHeight As Integer = Math.Max(CInt(60 * scale), 50)
-        Dim bottomMargin As Integer = Math.Max(CInt(30 * scale), 20)
-        Dim buttonSpacing As Integer = Math.Max(CInt(20 * scale), 10)
+        Dim margin As Integer = Math.Max(CInt(40 * scale), 25)
+        Dim buttonHeight As Integer = Math.Max(CInt(60 * scale), 55)
+        Dim bottomMargin As Integer = Math.Max(CInt(30 * scale), 25)
+        Dim buttonSpacing As Integer = Math.Max(CInt(20 * scale), 15)
         
         If btnNewVisitor IsNot Nothing Then
-            Dim btnWidth As Integer = Math.Max(CInt(150 * scale), 120)
-            Dim btnHeight As Integer = Math.Max(CInt(40 * scale), 35)
+            Dim btnWidth As Integer = Math.Max(CInt(150 * scale), 130)
+            Dim btnHeight As Integer = Math.Max(CInt(40 * scale), 38)
             btnNewVisitor.Size = New Size(btnWidth, btnHeight)
             btnNewVisitor.Location = New Point(panelWidth - btnWidth - margin, margin)
         End If
         
         If btnCheckIn IsNot Nothing AndAlso btnCheckIn.Visible Then
-            Dim btnWidth As Integer = Math.Min(CInt(450 * scale), (panelWidth - (3 * margin)) \ 2)
+            Dim maxButtonWidth As Integer = (panelWidth - (3 * margin) - buttonSpacing) \ 2
+            Dim btnWidth As Integer = Math.Min(CInt(450 * scale), maxButtonWidth)
+            If btnWidth < 180 Then btnWidth = Math.Min(180, maxButtonWidth)
+            
             btnCheckIn.Size = New Size(btnWidth, buttonHeight)
             btnCheckIn.Location = New Point(margin, panelHeight - buttonHeight - bottomMargin)
         End If
@@ -287,6 +295,8 @@ Public Class frmKiosk
             End If
             
             Dim btnWidth As Integer = Math.Min(CInt(450 * scale), availableWidth)
+            If btnWidth < 180 AndAlso btnCheckIn.Visible Then btnWidth = Math.Min(180, availableWidth)
+            
             btnGetTicket.Size = New Size(btnWidth, buttonHeight)
             btnGetTicket.Location = New Point(leftOffset, panelHeight - buttonHeight - bottomMargin)
         End If
