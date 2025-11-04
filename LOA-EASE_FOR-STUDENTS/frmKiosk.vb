@@ -162,24 +162,42 @@ Public Class frmKiosk
         Dim screenWidth As Integer = tpMain.ClientSize.Width
         Dim screenHeight As Integer = tpMain.ClientSize.Height
         
-        Dim panelWidth As Integer = 1280
-        Dim panelHeight As Integer = 880
+        Dim baseWidth As Integer = 1000
+        Dim baseHeight As Integer = 750
         
-        If screenWidth < panelWidth + 100 Then panelWidth = screenWidth - 100
-        If screenHeight < panelHeight + 100 Then panelHeight = screenHeight - 100
+        Dim scaleX As Double = screenWidth / 1920.0
+        Dim scaleY As Double = screenHeight / 960.0
+        Dim scale As Double = Math.Min(scaleX, scaleY)
         
-        If panelWidth < 1100 Then panelWidth = Math.Max(1100, screenWidth - 100)
-        If panelHeight < 800 Then panelHeight = Math.Max(800, screenHeight - 100)
+        scale = Math.Max(0.6, Math.Min(scale, 1.0))
+        
+        Dim panelWidth As Integer = CInt(baseWidth * scale)
+        Dim panelHeight As Integer = CInt(baseHeight * scale)
+        
+        Dim minWidth As Integer = 850
+        Dim minHeight As Integer = 650
+        If panelWidth < minWidth Then panelWidth = Math.Min(minWidth, screenWidth - 60)
+        If panelHeight < minHeight Then panelHeight = Math.Min(minHeight, screenHeight - 60)
+        
+        Dim maxWidth As Integer = screenWidth - 80
+        Dim maxHeight As Integer = screenHeight - 80
+        If panelWidth > maxWidth Then panelWidth = maxWidth
+        If panelHeight > maxHeight Then panelHeight = maxHeight
         
         pnlMainInput.SuspendLayout()
         pnlMainInput.Size = New Size(panelWidth, panelHeight)
         pnlMainInput.Location = New Point((screenWidth - panelWidth) \ 2, (screenHeight - panelHeight) \ 2)
         
         PositionButtons(panelWidth, panelHeight)
+        ScaleInternalControls(scale, panelWidth, panelHeight)
         
         If pnlTicketResult IsNot Nothing Then
-            Dim ticketWidth As Integer = Math.Min(950, screenWidth - 80)
-            Dim ticketHeight As Integer = Math.Min(700, screenHeight - 80)
+            Dim ticketScale As Double = Math.Min(scaleX, scaleY)
+            ticketScale = Math.Max(0.6, Math.Min(ticketScale, 1.0))
+            Dim ticketWidth As Integer = CInt(900 * ticketScale)
+            Dim ticketHeight As Integer = CInt(650 * ticketScale)
+            ticketWidth = Math.Max(700, Math.Min(ticketWidth, screenWidth - 80))
+            ticketHeight = Math.Max(500, Math.Min(ticketHeight, screenHeight - 80))
             pnlTicketResult.Size = New Size(ticketWidth, ticketHeight)
             If tpTicket IsNot Nothing Then
                 pnlTicketResult.Location = New Point((tpTicket.ClientSize.Width - ticketWidth) \ 2, (tpTicket.ClientSize.Height - ticketHeight) \ 2)
@@ -190,14 +208,15 @@ Public Class frmKiosk
     End Sub
 
     Private Sub PositionButtons(panelWidth As Integer, panelHeight As Integer)
-        Dim margin As Integer = 35
-        Dim buttonHeight As Integer = 65
-        Dim bottomMargin As Integer = 35
-        Dim buttonSpacing As Integer = 25
+        Dim scaleFactor As Double = panelWidth / 1000.0
+        Dim margin As Integer = Math.Max(30, CInt(40 * scaleFactor))
+        Dim buttonHeight As Integer = Math.Max(55, CInt(60 * scaleFactor))
+        Dim bottomMargin As Integer = margin
+        Dim buttonSpacing As Integer = Math.Max(15, CInt(20 * scaleFactor))
         
         If btnNewVisitor IsNot Nothing Then
-            Dim btnWidth As Integer = 160
-            Dim btnHeight As Integer = 50
+            Dim btnWidth As Integer = Math.Max(140, CInt(150 * scaleFactor))
+            Dim btnHeight As Integer = Math.Max(40, CInt(45 * scaleFactor))
             btnNewVisitor.Size = New Size(btnWidth, btnHeight)
             btnNewVisitor.Location = New Point(panelWidth - btnWidth - margin, margin)
         End If
@@ -225,6 +244,25 @@ Public Class frmKiosk
             btnGetTicket.Size = New Size(btnWidth, buttonHeight)
             btnGetTicket.Location = New Point(leftOffset, panelHeight - buttonHeight - bottomMargin)
         End If
+    End Sub
+    
+    Private Sub ScaleInternalControls(scale As Double, panelWidth As Integer, panelHeight As Integer)
+        If gbStudentInfo Is Nothing OrElse tlpPurpose Is Nothing Then Return
+        
+        Dim margin As Integer = Math.Max(30, CInt(40 * scale))
+        Dim verticalSpacing As Integer = Math.Max(10, CInt(15 * scale))
+        
+        Dim topY As Integer = If(lblInstructions IsNot Nothing AndAlso lblInstructions.Visible, 165, 70)
+        topY = Math.Max(topY, CInt(topY * scale))
+        
+        Dim groupHeight As Integer = Math.Max(200, CInt(285 * scale))
+        gbStudentInfo.Location = New Point(margin, topY)
+        gbStudentInfo.Size = New Size(panelWidth - (2 * margin), groupHeight)
+        
+        Dim purposeY As Integer = gbStudentInfo.Bottom + verticalSpacing
+        Dim purposeHeight As Integer = Math.Max(180, CInt(260 * scale))
+        tlpPurpose.Location = New Point(margin, purposeY)
+        tlpPurpose.Size = New Size(panelWidth - (2 * margin), purposeHeight)
     End Sub
 
     Private Sub MakeResponsive()
