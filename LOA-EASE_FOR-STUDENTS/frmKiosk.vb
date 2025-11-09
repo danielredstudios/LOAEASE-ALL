@@ -24,6 +24,10 @@ Public Class frmKiosk
 
     Private _scheduledQueueId As Integer? = Nothing
     Private _scheduledTime As DateTime? = Nothing
+    
+    ' User type selection buttons
+    Private WithEvents btnIAmStudent As New Button()
+    Private WithEvents btnIAmVisitor As New Button()
 
     <DllImport("dwmapi.dll")>
     Private Shared Function DwmSetWindowAttribute(hwnd As IntPtr, attr As Integer, ByRef attrValue As Integer, attrSize As Integer) As Integer
@@ -54,6 +58,12 @@ Public Class frmKiosk
         CenterPanel()
         tmrStudentSearch.Interval = 500
         
+        ' Hide the main input panel initially
+        pnlMainInput.Visible = False
+        
+        ' Show the initial user type selection screen
+        ShowUserTypeSelection()
+        
         pnlMainInput.Refresh()
         lblInstructions.Refresh()
 
@@ -67,6 +77,96 @@ Public Class frmKiosk
             soundPlayer.Dispose()
         End If
     End Sub
+    
+    Private Sub ShowUserTypeSelection()
+        ' Configure "I am a Student" button
+        btnIAmStudent.Text = "I am a Student" & vbCrLf & "👨‍🎓"
+        btnIAmStudent.Font = New Font("Poppins", 24, FontStyle.Bold)
+        btnIAmStudent.Size = New Size(400, 200)
+        btnIAmStudent.BackColor = Color.FromArgb(0, 123, 255)
+        btnIAmStudent.ForeColor = Color.White
+        btnIAmStudent.FlatStyle = FlatStyle.Flat
+        btnIAmStudent.FlatAppearance.BorderSize = 0
+        btnIAmStudent.Cursor = Cursors.Hand
+        btnIAmStudent.TextAlign = ContentAlignment.MiddleCenter
+        
+        ' Configure "I am a Visitor" button
+        btnIAmVisitor.Text = "I am a Visitor" & vbCrLf & "👤"
+        btnIAmVisitor.Font = New Font("Poppins", 24, FontStyle.Bold)
+        btnIAmVisitor.Size = New Size(400, 200)
+        btnIAmVisitor.BackColor = Color.FromArgb(40, 167, 69)
+        btnIAmVisitor.ForeColor = Color.White
+        btnIAmVisitor.FlatStyle = FlatStyle.Flat
+        btnIAmVisitor.FlatAppearance.BorderSize = 0
+        btnIAmVisitor.Cursor = Cursors.Hand
+        btnIAmVisitor.TextAlign = ContentAlignment.MiddleCenter
+        
+        ' Position buttons centered on the screen
+        Dim centerX As Integer = tpMain.ClientSize.Width / 2
+        Dim centerY As Integer = tpMain.ClientSize.Height / 2
+        
+        btnIAmStudent.Location = New Point(centerX - btnIAmStudent.Width - 30, centerY - btnIAmStudent.Height / 2)
+        btnIAmVisitor.Location = New Point(centerX + 30, centerY - btnIAmVisitor.Height / 2)
+        
+        ' Add buttons to the tab page
+        tpMain.Controls.Add(btnIAmStudent)
+        tpMain.Controls.Add(btnIAmVisitor)
+        
+        ' Apply rounded corners
+        SetRoundedCorners(btnIAmStudent, 15)
+        SetRoundedCorners(btnIAmVisitor, 15)
+        
+        btnIAmStudent.BringToFront()
+        btnIAmVisitor.BringToFront()
+    End Sub
+    
+    Private Sub btnIAmStudent_Click(sender As Object, e As EventArgs) Handles btnIAmStudent.Click
+        ' Hide selection buttons
+        btnIAmStudent.Visible = False
+        btnIAmVisitor.Visible = False
+        
+        ' Show the main input panel for students
+        isVisitorMode = False
+        pnlMainInput.Visible = True
+        ResetForm()
+    End Sub
+    
+    Private Sub btnIAmVisitor_Click(sender As Object, e As EventArgs) Handles btnIAmVisitor.Click
+        ' Hide selection buttons
+        btnIAmStudent.Visible = False
+        btnIAmVisitor.Visible = False
+        
+        ' Show the main input panel for visitors
+        isVisitorMode = True
+        pnlMainInput.Visible = True
+        ResetForm()
+        
+        ' Configure form for visitors
+        isVisitorMode = True
+        gbStudentInfo.Text = "Visitor Information"
+        btnNewVisitor.Text = "I am a Student"
+        btnNewVisitor.BackColor = Color.FromArgb(0, 123, 255)
+        btnCheckIn.Visible = False
+
+        txtStudentID.Visible = False
+        Label1.Visible = False
+        txtCourse.Visible = False
+        Label4.Visible = False
+        txtYearLevel.Visible = False
+        Label5.Visible = False
+
+        chkPromissory.Visible = False
+        chkDocRequest.Location = chkPromissoryOriginalLocation
+        chkClearance.Location = chkDocRequestOriginalLocation
+
+        txtLastName.ReadOnly = False
+        txtFirstName.ReadOnly = False
+
+        txtLastName.Location = New Point(155, 42)
+        Label2.Location = New Point(20, 44)
+        txtFirstName.Location = New Point(155, 79)
+        Label3.Location = New Point(20, 81)
+    End Sub
 
     Private Sub LoadSoundFile()
         Try
@@ -77,6 +177,28 @@ Public Class frmKiosk
             End If
         Catch ex As Exception
         End Try
+    End Sub
+    
+    Private Sub ShowInlineMessage(message As String, isError As Boolean)
+        ' Display message in the lblInstructions label
+        lblInstructions.Visible = True
+        lblInstructions.Text = message
+        lblInstructions.BringToFront()
+        
+        If isError Then
+            lblInstructions.BackColor = Color.FromArgb(248, 215, 218)
+            lblInstructions.ForeColor = Color.FromArgb(132, 32, 41)
+        Else
+            lblInstructions.BackColor = Color.FromArgb(255, 243, 205)
+            lblInstructions.ForeColor = Color.FromArgb(133, 100, 4)
+        End If
+    End Sub
+    
+    Private Sub ShowInactiveStudentMessage()
+        ' Show full-panel message for inactive students
+        txtLastName.Text = ""
+        txtFirstName.Text = ""
+        ShowInlineMessage("⚠️ ACCOUNT INACTIVE" & vbCrLf & "Please see an administrator for help.", True)
     End Sub
 
     Private Sub PlayNotificationSound()
@@ -101,37 +223,11 @@ Public Class frmKiosk
     End Sub
 
     Private Sub btnNewVisitor_Click(sender As Object, e As EventArgs) Handles btnNewVisitor.Click
-        If isVisitorMode Then
-            ResetForm()
-        Else
-            isVisitorMode = True
-            ResetForm()
-            isVisitorMode = True
-
-            gbStudentInfo.Text = "Visitor Information"
-            btnNewVisitor.Text = "I am a Student"
-            btnNewVisitor.BackColor = Color.FromArgb(220, 53, 69)
-            btnCheckIn.Visible = False
-
-            txtStudentID.Visible = False
-            Label1.Visible = False
-            txtCourse.Visible = False
-            Label4.Visible = False
-            txtYearLevel.Visible = False
-            Label5.Visible = False
-
-            chkPromissory.Visible = False
-            chkDocRequest.Location = chkPromissoryOriginalLocation
-            chkClearance.Location = chkDocRequestOriginalLocation
-
-            txtLastName.ReadOnly = False
-            txtFirstName.ReadOnly = False
-
-            txtLastName.Location = New Point(155, 42)
-            Label2.Location = New Point(20, 44)
-            txtFirstName.Location = New Point(155, 79)
-            Label3.Location = New Point(20, 81)
-        End If
+        ' Toggle back to the initial selection screen
+        pnlMainInput.Visible = False
+        btnIAmStudent.Visible = True
+        btnIAmVisitor.Visible = True
+        ResetForm()
     End Sub
 
     Private Sub SetRoundedCorners(ctrl As Control, radius As Integer)
@@ -222,12 +318,16 @@ Public Class frmKiosk
 
         lblCheckInPrompt.Visible = False
         lblCheckInPrompt.Text = ""
+        lblInstructions.Visible = True
+        lblInstructions.ForeColor = Color.FromArgb(133, 100, 4)
+        lblInstructions.BackColor = Color.FromArgb(255, 243, 205)
+        lblInstructions.Text = "📋 HOW TO USE:" & vbCrLf & " 1.  Enter Student ID  •   2.   Select Purpose  •  3.  Tap Get Ticket"
 
         isVisitorMode = False
         gbStudentInfo.Text = "Student Information"
         If btnNewVisitor IsNot Nothing Then
-            btnNewVisitor.Text = "Visitor"
-            btnNewVisitor.BackColor = Color.FromArgb(0, 123, 255)
+            btnNewVisitor.Text = "← Back to Start"
+            btnNewVisitor.BackColor = Color.FromArgb(108, 117, 125)
         End If
 
         txtStudentID.Visible = True
@@ -499,33 +599,33 @@ Public Class frmKiosk
     Private Sub btnGetTicket_Click(sender As Object, e As EventArgs) Handles btnGetTicket.Click
         Dim purpose As String = GetPurposeString()
         If String.IsNullOrWhiteSpace(purpose) Then
-            MessageBox.Show("Please select a purpose for your visit.", "Input Required", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            ShowInlineMessage("⚠️ Please select a purpose for your visit.", True)
             Return
         End If
         If chkDocRequest.Checked AndAlso Not (chkDiploma.Checked Or chkTOR.Checked Or chkGMC.Checked) Then
-            MessageBox.Show("Please select at least one type of document to request.", "Input Required", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            ShowInlineMessage("⚠️ Please select at least one type of document to request.", True)
             Return
         End If
 
         If isVisitorMode Then
             If String.IsNullOrWhiteSpace(txtLastName.Text) Or String.IsNullOrWhiteSpace(txtFirstName.Text) Then
-                MessageBox.Show("Please enter your First and Last Name.", "Input Required", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                ShowInlineMessage("⚠️ Please enter your First and Last Name.", True)
                 Return
             End If
         Else
             If studentId = -1 Then
-                MessageBox.Show("Please enter a valid Student ID.", "Input Required", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                ShowInlineMessage("⚠️ Please enter a valid Student ID.", True)
                 Return
             End If
             If HasActiveTicket(studentId) Then
-                MessageBox.Show("You already have an active transaction." & vbCrLf & "Please complete your current transaction before getting a new ticket.", "Active Transaction Found", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                ShowInlineMessage("⚠️ ACTIVE TRANSACTION FOUND" & vbCrLf & "Please complete your current transaction before getting a new ticket.", True)
                 Return
             End If
         End If
 
         FindBestCounterAndTimeSlot()
         If selectedCounterId = -1 OrElse selectedTimeSlot = "No available slots" Then
-            MessageBox.Show("No available slots. Please try again later.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            ShowInlineMessage("⚠️ No available slots. Please try again later.", True)
             Return
         End If
 
@@ -673,10 +773,16 @@ Public Class frmKiosk
 
                             CheckForScheduledAppointment(studentId)
                             FindBestCounterAndTimeSlot()
+                            
+                            ' Clear any previous error messages
+                            lblInstructions.Text = "📋 HOW TO USE:" & vbCrLf & " 1.  Enter Student ID  •   2.   Select Purpose  •  3.  Tap Get Ticket"
+                            lblInstructions.BackColor = Color.FromArgb(255, 243, 205)
+                            lblInstructions.ForeColor = Color.FromArgb(133, 100, 4)
                         Else
                             studentId = -1
-                            txtLastName.Text = "Student Not Found"
-                            txtFirstName.Text = "Check ID or tap 'Visitor'"
+                            txtLastName.Clear()
+                            txtFirstName.Clear()
+                            ShowInlineMessage("⚠️ STUDENT NOT FOUND" & vbCrLf & "Check your ID or tap '← Back to Start' if you're a visitor.", True)
                             btnCheckIn.Enabled = False
                             UpdateUIWithSelection()
                         End If
@@ -801,7 +907,7 @@ Public Class frmKiosk
 
     Private Sub btnCheckIn_Click(sender As Object, e As EventArgs) Handles btnCheckIn.Click
         If Not _scheduledQueueId.HasValue Then
-            MessageBox.Show("No scheduled appointment found to check in.", "Check-In Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            ShowInlineMessage("⚠️ No scheduled appointment found to check in.", True)
             Return
         End If
 
@@ -810,12 +916,12 @@ Public Class frmKiosk
         Dim now As DateTime = DateTime.Now
 
         If now < officeStartTime Then
-            MessageBox.Show($"Check-in is not yet open. The office opens at {officeStartTime.ToString("hh:mm tt")}.", "Check-In Not Open", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            ShowInlineMessage($"⏰ Check-in is not yet open." & vbCrLf & $"The office opens at {officeStartTime.ToString("hh:mm tt")}.", False)
             Return
         End If
 
         If now > officeEndTime Then
-            MessageBox.Show("The office is now closed. Check-in is no longer available.", "Check-In Closed", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            ShowInlineMessage("⚠️ The office is now closed." & vbCrLf & "Check-in is no longer available.", True)
             Return
         End If
 
@@ -834,14 +940,14 @@ Public Class frmKiosk
                             queueNumber = reader.GetString("queue_number")
                             assignedCounterId = reader.GetInt32("counter_id")
                         Else
-                            MessageBox.Show("Could not check in. Your appointment may have already been processed or cancelled.", "Check-In Failed", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                            ShowInlineMessage("⚠️ CHECK-IN FAILED" & vbCrLf & "Your appointment may have already been processed or cancelled.", True)
                             Return
                         End If
                     End Using
                 End Using
 
                 If Not IsCounterOpen(assignedCounterId) Then
-                    MessageBox.Show("Your assigned counter is currently closed. Please see staff for assistance.", "Counter Closed", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                    ShowInlineMessage("⚠️ COUNTER CLOSED" & vbCrLf & "Your assigned counter is currently closed. Please see staff for assistance.", True)
                     Return
                 End If
 
@@ -854,12 +960,12 @@ Public Class frmKiosk
                         FetchCounterDetails(assignedCounterId)
                         ShowTicket(queueNumber)
                     Else
-                        MessageBox.Show("Could not check in. Your appointment may have already been processed or cancelled.", "Check-In Failed", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                        ShowInlineMessage("⚠️ CHECK-IN FAILED" & vbCrLf & "Your appointment may have already been processed or cancelled.", True)
                     End If
                 End Using
 
             Catch ex As Exception
-                MessageBox.Show("Unable to check in. Please try again or ask staff for help.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                ShowInlineMessage("⚠️ Unable to check in." & vbCrLf & "Please try again or ask staff for help.", True)
             End Try
         End Using
     End Sub
