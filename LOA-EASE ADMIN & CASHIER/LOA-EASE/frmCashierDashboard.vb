@@ -79,12 +79,12 @@ Public Class frmCashierDashboard
             Try
                 conn.Open()
                 Dim query As String = "
-                    SELECT q.queue_id, q.queue_number, q.purpose, q.visitor_id,
+                    SELECT q.queue_id, q.queue_number, q.purpose, q.is_visitor, q.visitor_id,
                            s.student_number, s.first_name, s.last_name, s.course,
                            v.full_name AS visitor_name
                     FROM queues q
                     LEFT JOIN students s ON q.student_id = s.student_id
-                     LEFT JOIN visitors v ON q.visitor_id = v.visitor_id
+                    LEFT JOIN visitors v ON q.visitor_id = v.visitor_id
                     WHERE q.counter_id = @counterId AND q.status = 'serving' AND DATE(q.schedule_datetime) = CURDATE()
                     LIMIT 1"
                 Using cmd As New MySqlCommand(query, conn)
@@ -160,11 +160,19 @@ Public Class frmCashierDashboard
         lblServingNumber.Text = reader("queue_number").ToString()
         lblPurpose.Text = $"Purpose of Visit: {reader("purpose")}"
 
-        If Not IsDBNull(reader("visitor_id")) Then
+        ' Check is_visitor flag to determine which name to display
+        Dim isVisitor As Boolean = False
+        If Not IsDBNull(reader("is_visitor")) Then
+            isVisitor = Convert.ToBoolean(reader("is_visitor"))
+        End If
+
+        If isVisitor AndAlso Not IsDBNull(reader("visitor_name")) Then
+            ' Display visitor information
             lblName.Text = $"Name: {reader("visitor_name")}"
             lblStudentNumber.Text = "Student Number: VISITOR"
             lblCourse.Text = "Course: N/A"
         ElseIf Not IsDBNull(reader("student_number")) Then
+            ' Display student information
             lblName.Text = $"Name: {reader("first_name")} {reader("last_name")}"
             lblStudentNumber.Text = $"Student Number: {reader("student_number")}"
             lblCourse.Text = $"Course: {reader("course")}"

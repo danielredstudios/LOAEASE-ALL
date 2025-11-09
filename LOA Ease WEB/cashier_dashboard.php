@@ -44,6 +44,25 @@ $full_name = $_SESSION['full_name'];
     </nav>
 
     <div class="container mt-4">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-success">✅ Completed Today</h5>
+                        <h2 class="display-4 fw-bold" id="kpi_completed">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-warning">⚠️ No-Show Today</h5>
+                        <h2 class="display-4 fw-bold" id="kpi_no_show">0</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div class="row">
             <div class="col-md-5">
                 <div class="card serving-card text-center">
@@ -193,6 +212,10 @@ $full_name = $_SESSION['full_name'];
                     waitingList.innerHTML = '';
                     
                     if (data.success) {
+                        // Update KPIs
+                        document.getElementById('kpi_completed').textContent = data.completed_count || 0;
+                        document.getElementById('kpi_no_show').textContent = data.no_show_count || 0;
+                        
                         const newWaitingQueueNumbers = new Set(data.waiting.map(item => item.queue_number));
 
                         if (!initialLoad) {
@@ -210,14 +233,25 @@ $full_name = $_SESSION['full_name'];
                             servingNumber.textContent = data.serving.queue_number;
                             document.getElementById('serving_purpose').textContent = data.serving.purpose;
                             
-                            if (data.serving.student_number) {
+                            // Use display_name if available, otherwise fall back to original logic
+                            if (data.serving.display_name) {
+                                document.getElementById('serving_name').textContent = data.serving.display_name;
+                            } else if (data.serving.student_number) {
                                 document.getElementById('serving_name').textContent = `${data.serving.first_name} ${data.serving.last_name}`;
+                            } else {
+                                document.getElementById('serving_name').textContent = data.serving.visitor_name || 'N/A';
+                            }
+                            
+                            // Show/hide student-specific fields based on is_visitor flag
+                            if (data.serving.is_visitor == 1) {
+                                document.getElementById('serving_student_no_li').style.display = 'none';
+                                document.getElementById('serving_course_li').style.display = 'none';
+                            } else if (data.serving.student_number) {
                                 document.getElementById('serving_student_no').textContent = data.serving.student_number;
                                 document.getElementById('serving_course').textContent = data.serving.course;
                                 document.getElementById('serving_student_no_li').style.display = 'block';
                                 document.getElementById('serving_course_li').style.display = 'block';
                             } else {
-                                document.getElementById('serving_name').textContent = data.serving.visitor_name;
                                 document.getElementById('serving_student_no_li').style.display = 'none';
                                 document.getElementById('serving_course_li').style.display = 'none';
                             }
